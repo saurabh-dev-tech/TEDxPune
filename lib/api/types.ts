@@ -13,6 +13,10 @@ export interface User {
   postsCount?: number;
   createdAt?: string;
   updatedAt?: string;
+  linkedin?: string;
+  whatsapp?: string;
+  instagram?: string;
+  x?: string;
 }
 
 export interface UpdateUserPayload {
@@ -22,6 +26,10 @@ export interface UpdateUserPayload {
   avatarUrl?: string;
   location?: string;
   website?: string;
+  linkedin?: string;
+  whatsapp?: string;
+  instagram?: string;
+  x?: string;
 }
 
 export interface Paginated<T> {

@@ -4,9 +4,9 @@ import {
   Platform, RefreshControl, ActivityIndicator,
   Image, Alert,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
+import YoutubePlayer from 'react-native-youtube-iframe';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { C, Fonts } from '@/constants/theme';
 import { Avatar } from '@/components/tedx/avatar';
 import { useAuth } from '@/lib/auth/context';
@@ -50,25 +50,14 @@ const ACCENT: Record<string, string> = {
   poll:  '#F59E0B',
 };
 
-/**
- * Convert any video URL into a directly-loadable embed URI.
- * Loading the embed URI directly (source={{ uri }}) avoids the
- * null-origin CSP block that youtube/vimeo apply to html-injected iframes.
- */
-function toEmbedUri(url: string): string {
-  // YouTube: watch?v=ID  |  youtu.be/ID  |  shorts/ID
-  const yt =
+/** Extract YouTube video ID from any URL format, or return null. */
+function extractYoutubeId(url: string): string | null {
+  const match =
     url.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/) ||
     url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/) ||
-    url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
-  if (yt) return `https://www.youtube.com/embed/${yt[1]}?playsinline=1&rel=0`;
-
-  // Vimeo: vimeo.com/ID
-  const vimeo = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
-
-  // Already an embed URL or direct file — use as-is
-  return url;
+    url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/) ||
+    url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
 }
 
 /* ── Poll block ───────────────────────────────────────────────────────────── */
@@ -138,7 +127,7 @@ function KudosButton({
     >
       <Text style={{ fontSize: 14, marginRight: 5 }}>{kudoed ? '👏' : '🤝'}</Text>
       <Text style={[styles.kudosLabel, kudoed && { color: C.red }]}>
-        Kudos{kudosCount > 0 ? ` · ${kudosCount}` : ''}
+        {kudosCount > 0 ? `${kudosCount}` : ''}
       </Text>
     </TouchableOpacity>
   );
@@ -221,19 +210,28 @@ function LivePostCard({
       )}
 
       {/* ── Video ── */}
-      {post.postType === 'video' && !!post.videoUrl && (
-        <View style={styles.videoContainer}>
-          <WebView
-            source={{ uri: toEmbedUri(post.videoUrl) }}
-            style={{ flex: 1, backgroundColor: '#000' }}
-            scrollEnabled={false}
-            allowsInlineMediaPlayback
-            mediaPlaybackRequiresUserAction={false}
-            allowsFullscreenVideo
-            javaScriptEnabled
-          />
-        </View>
-      )}
+      {post.postType === 'video' && !!post.videoUrl && (() => {
+        const ytId = extractYoutubeId(post.videoUrl);
+        if (!ytId) return null;
+        return (
+          <View style={styles.videoContainer}>
+            <YoutubePlayer
+              height={200}
+              videoId={ytId}
+              play={false}
+              webViewProps={{
+                allowsInlineMediaPlayback: true,
+                mediaPlaybackRequiresUserAction: true,
+              }}
+              initialPlayerParams={{
+                modestbranding: true,
+                rel: false,
+                preventFullScreen: false,
+              }}
+            />
+          </View>
+        );
+      })()}
 
       {/* ── Poll ── */}
       {post.postType === 'poll' && (post.poll?.length ?? 0) > 0 && (
@@ -265,6 +263,7 @@ function LivePostCard({
 
 /* ── Screen ───────────────────────────────────────────────────────────────── */
 export default function FeedScreen() {
+  const router = useRouter();
   const { user, claims } = useAuth();
   const myAvatarUrl = user?.avatarUrl ?? (claims?.picture as string | undefined) ?? null;
   const myName      = user?.fullName  ?? (claims?.name  as string | undefined) ?? 'You Me';
@@ -318,7 +317,9 @@ export default function FeedScreen() {
             <Text style={{ fontSize: 22 }}>🔔</Text>
             <View style={styles.notifDot} />
           </View>
-          <Avatar name={myName} size={30} url={myAvatarUrl} />
+          <TouchableOpacity onPress={() => router.navigate('/profile')} activeOpacity={0.7}>
+            <Avatar name={myName} size={30} url={myAvatarUrl} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -336,7 +337,7 @@ export default function FeedScreen() {
             </Text>
           </View>
           <Text style={styles.mastheadTitle}>
-            {'What the\ncommunity is\n'}
+            {'What the community is\n'}
             <Text style={{ fontStyle: 'italic' }}>thinking</Text>
             {' today.'}
           </Text>

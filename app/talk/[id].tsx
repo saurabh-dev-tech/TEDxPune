@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,24 +6,31 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  Share,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { C, Fonts } from '@/constants/theme';
 import { TalkThumb } from '@/components/tedx/talk-thumb';
-import { WebView } from 'react-native-webview';
+import YoutubePlayer from 'react-native-youtube-iframe';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const PLAYER_HEIGHT = Math.round((SCREEN_WIDTH * 9) / 16); // 16:9 ratio
 
 function SectionHeader({ children }: { children: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
       <View style={{ width: 12, height: 1, backgroundColor: C.red }} />
-      <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.slate, letterSpacing: 1.4, textTransform: 'uppercase', fontWeight: '600' }}>
+      <Text style={{
+        fontFamily: Fonts.mono, fontSize: 10, color: C.slate,
+        letterSpacing: 1.4, textTransform: 'uppercase', fontWeight: '600',
+      }}>
         {children}
       </Text>
     </View>
   );
 }
-
 
 export default function TalkPlayerScreen() {
   const { id, title, duration, thumbnail, desc } = useLocalSearchParams<{
@@ -33,92 +40,96 @@ export default function TalkPlayerScreen() {
     thumbnail?: string;
     desc?: string;
   }>();
-  const router    = useRouter();
-  const [isSaved,   setIsSaved]   = useState(false);
-  const [isPlaying, setIsPlaying] = useState(true); // Auto-play on open
+  const router = useRouter();
+  const [isSaved, setIsSaved] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playerReady, setPlayerReady] = useState(false);
 
-  // `id` is the YouTube video ID (e.g. "dQw4w9WgXcQ")
-  const videoTitle = title ?? 'TEDx Talk';
-  const thumbUri   = thumbnail && thumbnail.length > 0 ? thumbnail : null;
+  const videoTitle  = title ?? 'TEDx Talk';
+  const thumbUri    = thumbnail && thumbnail.length > 0 ? thumbnail : null;
   const description = desc && desc.length > 0 ? desc : null;
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }}>
-      {/* Back button */}
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
-        <Text style={{ color: '#fff', fontSize: 18 }}>‹</Text>
-      </TouchableOpacity>
+  const onStateChange = useCallback((state: string) => {
+    if (state === 'ended') setIsPlaying(false);
+  }, []);
 
-      {/* Video stage */}
-      <View style={{ height: 230, backgroundColor: C.ink }}>
-        {isPlaying ? (
-          <WebView
-            source={{
-              html: `
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<style>*{margin:0;padding:0;overflow:hidden;background:#000}
-iframe{width:100%;height:100%;border:0}</style>
-</head>
-<body>
-<iframe
-  src="https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1"
-  allow="autoplay; encrypted-media; fullscreen"
-  allowfullscreen
-></iframe>
-</body>
-</html>`,
-              baseUrl: 'https://www.youtube.com',
-            }}
-            style={{ flex: 1, backgroundColor: C.ink }}
-            allowsFullscreenVideo
-            allowsInlineMediaPlayback
-            mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled
-            originWhitelist={['*']}
-          />
-        ) : (
-          <TouchableOpacity onPress={() => setIsPlaying(true)} activeOpacity={0.9} style={{ position: 'relative' }}>
-            {thumbUri ? (
-              <Image source={{ uri: thumbUri }} style={{ height: 230, width: '100%' }} resizeMode="cover" />
-            ) : (
-              <TalkThumb seed={videoTitle} height={230} />
-            )}
-            <View style={styles.playOverlay}>
-              <View style={styles.playBtn}>
-                <View style={{
-                  width: 0, height: 0,
-                  borderTopWidth: 11, borderBottomWidth: 11, borderLeftWidth: 20,
-                  borderTopColor: 'transparent', borderBottomColor: 'transparent',
-                  borderLeftColor: C.ink, marginLeft: 4,
-                }} />
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `${videoTitle}\nhttps://www.youtube.com/watch?v=${id}`,
+      });
+    } catch { /* cancelled */ }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }} edges={['top', 'bottom']}>
+      {/* Video player — full width, 16:9 */}
+      <View style={{ backgroundColor: C.ink }}>
+        {/* Back button overlay */}
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '600', marginTop: -1 }}>‹</Text>
+        </TouchableOpacity>
+
+        {/* Thumbnail shown until player is ready */}
+        {!playerReady && thumbUri && (
+          <View style={[StyleSheet.absoluteFill, { zIndex: 1 }]}>
+            <Image
+              source={{ uri: thumbUri }}
+              style={{ width: '100%', height: PLAYER_HEIGHT }}
+              resizeMode="cover"
+            />
+            <View style={styles.thumbPlayOverlay}>
+              <View style={styles.thumbPlayBtn}>
+                <View style={styles.thumbPlayTriangle} />
               </View>
             </View>
-          </TouchableOpacity>
+          </View>
         )}
+
+        <YoutubePlayer
+          height={PLAYER_HEIGHT}
+          videoId={id}
+          play={isPlaying}
+          onChangeState={onStateChange}
+          onReady={() => {
+            setPlayerReady(true);
+            setIsPlaying(true);
+          }}
+          webViewProps={{
+            allowsInlineMediaPlayback: true,
+            mediaPlaybackRequiresUserAction: false,
+          }}
+          initialPlayerParams={{
+            modestbranding: true,
+            rel: false,
+            preventFullScreen: false,
+          }}
+        />
       </View>
 
-      {/* Info scroll */}
-      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      {/* Info */}
+      <ScrollView
+        contentContainerStyle={{ padding: 18, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Duration */}
         {duration ? (
-          <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 }}>
-            {duration}
-          </Text>
+          <Text style={styles.durationLabel}>{duration}</Text>
         ) : null}
 
-        <Text style={{ fontFamily: Fonts.serif, fontSize: 25, lineHeight: 29, letterSpacing: -0.4, marginBottom: 14, color: C.ink }}>
-          {videoTitle}
-        </Text>
+        {/* Title */}
+        <Text style={styles.title}>{videoTitle}</Text>
 
         {/* Actions */}
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.actionItem} onPress={() => setIsSaved(s => !s)}>
-            <Text style={{ fontSize: 18, color: isSaved ? C.red : C.slate }}>{isSaved ? '♥' : '♡'}</Text>
+            <Text style={{ fontSize: 18, color: isSaved ? C.red : C.slate }}>
+              {isSaved ? '♥' : '♡'}
+            </Text>
             <Text style={[styles.actionLabel, isSaved && { color: C.red }]}>Save</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionItem}>
+
+          <TouchableOpacity style={styles.actionItem} onPress={handleShare}>
             <Text style={{ fontSize: 18, color: C.slate }}>↑</Text>
             <Text style={styles.actionLabel}>Share</Text>
           </TouchableOpacity>
@@ -128,7 +139,7 @@ iframe{width:100%;height:100%;border:0}</style>
         {description && (
           <View style={{ marginBottom: 20 }}>
             <SectionHeader>About this talk</SectionHeader>
-            <Text style={{ fontSize: 14, lineHeight: 21.7, color: C.ink }}>{description}</Text>
+            <Text style={styles.descText}>{description}</Text>
           </View>
         )}
       </ScrollView>
@@ -139,9 +150,9 @@ iframe{width:100%;height:100%;border:0}</style>
 const styles = StyleSheet.create({
   backBtn: {
     position: 'absolute',
-    top: 60,
+    top: 8,
     left: 14,
-    zIndex: 10,
+    zIndex: 20,
     width: 34,
     height: 34,
     borderRadius: 17,
@@ -149,83 +160,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+
+  /* Thumbnail overlay while player loads */
+  thumbPlayOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  thumbPlayBtn: {
+    width: 64, height: 64, borderRadius: 32,
     backgroundColor: 'rgba(255,255,255,0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 8,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
   },
-  scrubberTrack: {
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 2,
-    position: 'relative',
+  thumbPlayTriangle: {
+    width: 0, height: 0,
+    borderTopWidth: 11, borderBottomWidth: 11, borderLeftWidth: 20,
+    borderTopColor: 'transparent', borderBottomColor: 'transparent',
+    borderLeftColor: C.ink, marginLeft: 4,
   },
-  scrubberFill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    height: 3,
-    backgroundColor: C.red,
-    borderRadius: 2,
+
+  /* Info section */
+  durationLabel: {
+    fontFamily: Fonts.mono, fontSize: 10, color: C.faint,
+    letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8,
   },
-  scrubberThumb: {
-    position: 'absolute',
-    top: -4,
-    width: 11,
-    height: 11,
-    borderRadius: 5.5,
-    backgroundColor: C.red,
-    transform: [{ translateX: -5.5 }],
-  },
-  speakerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: C.hair,
-    marginBottom: 16,
-  },
-  followBtn: {
-    height: 30,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: C.ink,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
+  title: {
+    fontFamily: Fonts.serif, fontSize: 25, lineHeight: 29,
+    letterSpacing: -0.4, marginBottom: 14, color: C.ink,
   },
   actionsRow: {
-    flexDirection: 'row',
-    gap: 18,
-    marginBottom: 20,
-    alignItems: 'center',
+    flexDirection: 'row', gap: 18, marginBottom: 20, alignItems: 'center',
   },
   actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
   },
   actionLabel: {
-    fontSize: 12,
-    color: C.slate,
+    fontSize: 12, color: C.slate,
+  },
+  descText: {
+    fontSize: 14, lineHeight: 21.7, color: C.ink,
   },
 });

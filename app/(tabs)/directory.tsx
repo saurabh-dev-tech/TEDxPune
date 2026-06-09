@@ -11,11 +11,13 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { C, Fonts } from '@/constants/theme';
 import { Avatar } from '@/components/tedx/avatar';
 import { useApi } from '@/lib/hooks/use-api';
 import { UsersApi } from '@/lib/api/users';
 import type { User } from '@/lib/api/types';
+import { useAuth } from '@/lib/auth/context';
 
 const FILTER_CHIPS = ['All', 'Speakers', 'Attendees', 'Tech', 'Design', 'Climate'];
 
@@ -37,6 +39,7 @@ const roleColor: Record<string, string> = {
 };
 
 function MemberCard({ member, featured }: { member: User; featured?: boolean }) {
+  const router = useRouter();
   const role = inferRole(member.headline);
   const rc = roleColor[role] ?? C.slate;
   return (
@@ -63,7 +66,7 @@ function MemberCard({ member, featured }: { member: User; featured?: boolean }) 
       <TouchableOpacity
         style={styles.viewBtn}
         activeOpacity={0.7}
-        onPress={() => Alert.alert(member.fullName, member.headline ?? 'No headline.')}
+        onPress={() => router.push(`/member/${member.id}`)}
       >
         <Text style={{ fontSize: 12, fontWeight: '600', color: C.ink }}>View</Text>
       </TouchableOpacity>
@@ -75,6 +78,7 @@ export default function DirectoryScreen() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const { user: currentUser } = useAuth();
 
   const { data, loading, error, refetch } = useApi(
     () => UsersApi.directory(1, 50),
@@ -96,6 +100,9 @@ export default function DirectoryScreen() {
   const members = data?.data ?? [];
 
   const filtered = members.filter(m => {
+    // Filter out currently logged-in user
+    if (currentUser && m.id === currentUser.id) return false;
+
     const role = inferRole(m.headline);
     let matchFilter: boolean;
     if (activeFilter === 'All') matchFilter = true;

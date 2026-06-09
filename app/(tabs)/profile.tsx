@@ -64,6 +64,10 @@ export default function ProfileScreen() {
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
   const [editLocation, setEditLocation] = useState('');
   const [editWebsite, setEditWebsite] = useState('');
+  const [editLinkedin, setEditLinkedin] = useState('');
+  const [editWhatsapp, setEditWhatsapp] = useState('');
+  const [editInstagram, setEditInstagram] = useState('');
+  const [editX, setEditX] = useState('');
 
   useEffect(() => {
     refreshUser().catch(() => {});
@@ -76,6 +80,10 @@ export default function ProfileScreen() {
     setEditAvatarUrl(user?.avatarUrl ?? '');
     setEditLocation(user?.location ?? '');
     setEditWebsite(user?.website ?? '');
+    setEditLinkedin(user?.linkedin ?? '');
+    setEditWhatsapp(user?.whatsapp ?? '');
+    setEditInstagram(user?.instagram ?? '');
+    setEditX(user?.x ?? '');
     setShowEditModal(true);
   };
 
@@ -90,6 +98,10 @@ export default function ProfileScreen() {
         avatarUrl: editAvatarUrl.trim() || undefined,
         location: editLocation.trim() || undefined,
         website:  editWebsite.trim() || undefined,
+        linkedin: editLinkedin.trim() || undefined,
+        whatsapp: editWhatsapp.trim() || undefined,
+        instagram: editInstagram.trim() || undefined,
+        x: editX.trim() || undefined,
       });
       setUser(updated);
       setShowEditModal(false);
@@ -115,6 +127,10 @@ export default function ProfileScreen() {
   const displayBio     = user?.bio        ?? null;
   const displayLocation = user?.location  ?? null;
   const displayWebsite = user?.website    ?? null;
+  const displayLinkedin = user?.linkedin   ?? null;
+  const displayWhatsapp = user?.whatsapp   ?? null;
+  const displayInstagram = user?.instagram ?? null;
+  const displayX        = user?.x         ?? null;
   const avatarUrl      = user?.avatarUrl  ?? pictureFromClaims(claims) ?? null;
   const joinedYear     = user?.createdAt  ? new Date(user.createdAt).getFullYear() : null;
   const postsCount     = user?.postsCount ?? null;
@@ -217,12 +233,16 @@ export default function ProfileScreen() {
           </View>
 
           {/* Contact details from API */}
-          {(displayEmail || displayLocation || displayWebsite) && (
+          {(displayEmail || displayLocation || displayWebsite || displayLinkedin || displayWhatsapp || displayInstagram || displayX) && (
             <View style={{ marginBottom: 24 }}>
               <SectionHeader>Details</SectionHeader>
               {displayEmail    && <InfoRow icon="✉️" value={displayEmail} />}
               {displayLocation && <InfoRow icon="📍" value={displayLocation} />}
               {displayWebsite  && <InfoRow icon="🔗" value={displayWebsite} />}
+              {displayLinkedin  && <InfoRow icon="💼" value={`LinkedIn: ${displayLinkedin}`} />}
+              {displayWhatsapp  && <InfoRow icon="💬" value={`WhatsApp: ${displayWhatsapp}`} />}
+              {displayInstagram && <InfoRow icon="📸" value={`Instagram: ${displayInstagram}`} />}
+              {displayX         && <InfoRow icon="𝕏" value={`X: ${displayX}`} />}
             </View>
           )}
 
@@ -352,6 +372,55 @@ export default function ProfileScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="url"
+                  editable={!saving}
+                />
+
+                <FieldLabel>LinkedIn</FieldLabel>
+                <TextInput
+                  style={styles.field}
+                  value={editLinkedin}
+                  onChangeText={setEditLinkedin}
+                  placeholder="LinkedIn Username / URL"
+                  placeholderTextColor={C.faint}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!saving}
+                />
+
+                <FieldLabel>WhatsApp</FieldLabel>
+                <TextInput
+                  style={styles.field}
+                  value={editWhatsapp}
+                  onChangeText={setEditWhatsapp}
+                  placeholder="WhatsApp Number"
+                  placeholderTextColor={C.faint}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="phone-pad"
+                  editable={!saving}
+                />
+
+                <FieldLabel>Instagram</FieldLabel>
+                <TextInput
+                  style={styles.field}
+                  value={editInstagram}
+                  onChangeText={setEditInstagram}
+                  placeholder="Instagram Username"
+                  placeholderTextColor={C.faint}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!saving}
+                />
+
+                <FieldLabel>X (Twitter)</FieldLabel>
+                <TextInput
+                  style={styles.field}
+                  value={editX}
+                  onChangeText={setEditX}
+                  placeholder="X Handle"
+                  placeholderTextColor={C.faint}
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   editable={!saving}
                 />
               </View>
