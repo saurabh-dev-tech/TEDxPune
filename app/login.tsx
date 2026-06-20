@@ -294,22 +294,6 @@ export default function LoginScreen() {
           <Text style={styles.emailBtnText}>Continue with your email</Text>
         </TouchableOpacity>
 
-        {/* {__DEV__ && (
-          <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'center', gap: 18 }}>
-            <TouchableOpacity onPress={openServerSheet} disabled={busy}>
-              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, letterSpacing: 1, textTransform: 'uppercase' }}>
-                dev · server
-              </Text>
-            </TouchableOpacity>
-            <Text style={{ color: C.hair, fontSize: 10 }}>·</Text>
-            <TouchableOpacity onPress={() => setShowTokenModal(true)} disabled={busy}>
-              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, letterSpacing: 1, textTransform: 'uppercase' }}>
-                dev · paste JWT
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )} */}
-
         <Text style={styles.legal}>
           By continuing you agree to our{' '}
           <Text style={{ color: C.ink, textDecorationLine: 'underline' }}>Code of Conduct</Text>.
