@@ -18,6 +18,7 @@ import { Avatar } from '@/components/tedx/avatar';
 import { useAuth } from '@/lib/auth/context';
 import { UsersApi } from '@/lib/api/users';
 import { nameFromClaims, pictureFromClaims } from '@/lib/auth/jwt';
+import { MaxWidthContainer } from '@/components/tedx/max-width-container';
 
 function SectionHeader({ children }: { children: string }) {
   return (
@@ -137,117 +138,119 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <MaxWidthContainer style={{ backgroundColor: C.paper }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
-        {/* Banner */}
-        <View style={styles.banner}>
-          {[...Array(11)].map((_, i) => (
-            <View key={i} style={{
-              position: 'absolute', top: 0, bottom: 0,
-              left: i * 38 - 20, width: 1,
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              transform: [{ rotate: '25deg' }],
-            }} />
-          ))}
-          <View style={{ position: 'absolute', bottom: 0, left: 0, height: 5, width: '38%', backgroundColor: C.red }} />
-          <Text style={styles.bannerMeta}>
-            Pune
-            {displayRole ? ` · ${displayRole.toLowerCase()}` : ' · member'}
-            {joinedYear ? ` · ${joinedYear}` : ''}
-          </Text>
-          <TouchableOpacity onPress={handleSignOut} style={styles.signOutBtn}>
-            <Text style={styles.signOutText}>Sign out</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ paddingHorizontal: 20 }}>
-
-          {/* Avatar + Edit button */}
-          <View style={{ marginTop: -38, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <Avatar name={displayName} size={86} ring url={avatarUrl} />
-            <TouchableOpacity style={styles.editBtn} onPress={openEdit}>
-              <Text style={{ color: C.paper, fontWeight: '600', fontSize: 13 }}>Edit profile</Text>
+          {/* Banner */}
+          <View style={styles.banner}>
+            {[...Array(11)].map((_, i) => (
+              <View key={i} style={{
+                position: 'absolute', top: 0, bottom: 0,
+                left: i * 38 - 20, width: 1,
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                transform: [{ rotate: '25deg' }],
+              }} />
+            ))}
+            <View style={{ position: 'absolute', bottom: 0, left: 0, height: 5, width: '38%', backgroundColor: C.red }} />
+            <Text style={styles.bannerMeta}>
+              Pune
+              {displayRole ? ` · ${displayRole.toLowerCase()}` : ' · member'}
+              {joinedYear ? ` · ${joinedYear}` : ''}
+            </Text>
+            <TouchableOpacity onPress={handleSignOut} style={styles.signOutBtn}>
+              <Text style={styles.signOutText}>Sign out</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Name + headline */}
-          <Text style={styles.displayName}>{displayName}</Text>
-          {displayHeadline ? (
-            <Text style={styles.displayHeadline}>{displayHeadline}</Text>
-          ) : (
-            <TouchableOpacity onPress={openEdit}>
-              <Text style={[styles.displayHeadline, { color: C.faint, fontStyle: 'italic' }]}>
-                Add a headline…
-              </Text>
-            </TouchableOpacity>
-          )}
+          <View style={{ paddingHorizontal: 20 }}>
 
-          {/* Meta chips */}
-          <View style={styles.metaRow}>
-            {displayRole && (
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>{displayRole.toLowerCase()}</Text>
-              </View>
-            )}
-            {joinedYear && (
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>since {joinedYear}</Text>
-              </View>
-            )}
-            <View style={[styles.chip, { backgroundColor: '#dcfce7' }]}>
-              <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#16a34a', marginRight: 4 }} />
-              <Text style={[styles.chipText, { color: '#15803d' }]}>online</Text>
+            {/* Avatar + Edit button */}
+            <View style={{ marginTop: -38, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <Avatar name={displayName} size={86} ring url={avatarUrl} />
+              <TouchableOpacity style={styles.editBtn} onPress={openEdit}>
+                <Text style={{ color: C.paper, fontWeight: '600', fontSize: 13 }}>Edit profile</Text>
+              </TouchableOpacity>
             </View>
-          </View>
 
-          {/* Stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.statCell}>
-              <Text style={styles.statValue}>{postsCount ?? '—'}</Text>
-              <Text style={styles.statLabel}>posts</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCell}>
-              <Text style={styles.statValue}>—</Text>
-              <Text style={styles.statLabel}>connections</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCell}>
-              <Text style={styles.statValue}>—</Text>
-              <Text style={styles.statLabel}>talks</Text>
-            </View>
-          </View>
-
-          {/* About */}
-          <View style={{ marginBottom: 24 }}>
-            <SectionHeader>About</SectionHeader>
-            {displayBio ? (
-              <Text style={{ fontSize: 14, lineHeight: 22, color: C.ink }}>{displayBio}</Text>
+            {/* Name + headline */}
+            <Text style={styles.displayName}>{displayName}</Text>
+            {displayHeadline ? (
+              <Text style={styles.displayHeadline}>{displayHeadline}</Text>
             ) : (
               <TouchableOpacity onPress={openEdit}>
-                <Text style={{ fontSize: 14, lineHeight: 22, color: C.faint, fontStyle: 'italic' }}>
-                  Add a bio to tell the community what you're about…
+                <Text style={[styles.displayHeadline, { color: C.faint, fontStyle: 'italic' }]}>
+                  Add a headline…
                 </Text>
               </TouchableOpacity>
             )}
-          </View>
 
-          {/* Contact details from API */}
-          {(displayEmail || displayLocation || displayWebsite || displayLinkedin || displayWhatsapp || displayInstagram || displayX) && (
-            <View style={{ marginBottom: 24 }}>
-              <SectionHeader>Details</SectionHeader>
-              {displayEmail    && <InfoRow icon="✉️" value={displayEmail} />}
-              {displayLocation && <InfoRow icon="📍" value={displayLocation} />}
-              {displayWebsite  && <InfoRow icon="🔗" value={displayWebsite} />}
-              {displayLinkedin  && <InfoRow icon="💼" value={`LinkedIn: ${displayLinkedin}`} />}
-              {displayWhatsapp  && <InfoRow icon="💬" value={`WhatsApp: ${displayWhatsapp}`} />}
-              {displayInstagram && <InfoRow icon="📸" value={`Instagram: ${displayInstagram}`} />}
-              {displayX         && <InfoRow icon="𝕏" value={`X: ${displayX}`} />}
+            {/* Meta chips */}
+            <View style={styles.metaRow}>
+              {displayRole && (
+                <View style={styles.chip}>
+                  <Text style={styles.chipText}>{displayRole.toLowerCase()}</Text>
+                </View>
+              )}
+              {joinedYear && (
+                <View style={styles.chip}>
+                  <Text style={styles.chipText}>since {joinedYear}</Text>
+                </View>
+              )}
+              <View style={[styles.chip, { backgroundColor: '#dcfce7' }]}>
+                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#16a34a', marginRight: 4 }} />
+                <Text style={[styles.chipText, { color: '#15803d' }]}>online</Text>
+              </View>
             </View>
-          )}
 
-        </View>
-      </ScrollView>
+            {/* Stats */}
+            <View style={styles.statsRow}>
+              <View style={styles.statCell}>
+                <Text style={styles.statValue}>{postsCount ?? '—'}</Text>
+                <Text style={styles.statLabel}>posts</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statCell}>
+                <Text style={styles.statValue}>—</Text>
+                <Text style={styles.statLabel}>connections</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statCell}>
+                <Text style={styles.statValue}>—</Text>
+                <Text style={styles.statLabel}>talks</Text>
+              </View>
+            </View>
+
+            {/* About */}
+            <View style={{ marginBottom: 24 }}>
+              <SectionHeader>About</SectionHeader>
+              {displayBio ? (
+                <Text style={{ fontSize: 14, lineHeight: 22, color: C.ink }}>{displayBio}</Text>
+              ) : (
+                <TouchableOpacity onPress={openEdit}>
+                  <Text style={{ fontSize: 14, lineHeight: 22, color: C.faint, fontStyle: 'italic' }}>
+                    Add a bio to tell the community what you're about…
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Contact details from API */}
+            {(displayEmail || displayLocation || displayWebsite || displayLinkedin || displayWhatsapp || displayInstagram || displayX) && (
+              <View style={{ marginBottom: 24 }}>
+                <SectionHeader>Details</SectionHeader>
+                {displayEmail    && <InfoRow icon="✉️" value={displayEmail} />}
+                {displayLocation && <InfoRow icon="📍" value={displayLocation} />}
+                {displayWebsite  && <InfoRow icon="🔗" value={displayWebsite} />}
+                {displayLinkedin  && <InfoRow icon="💼" value={`LinkedIn: ${displayLinkedin}`} />}
+                {displayWhatsapp  && <InfoRow icon="💬" value={`WhatsApp: ${displayWhatsapp}`} />}
+                {displayInstagram && <InfoRow icon="📸" value={`Instagram: ${displayInstagram}`} />}
+                {displayX         && <InfoRow icon="𝕏" value={`X: ${displayX}`} />}
+              </View>
+            )}
+
+          </View>
+        </ScrollView>
+      </MaxWidthContainer>
 
       {/* ── Edit profile modal ── */}
       <Modal

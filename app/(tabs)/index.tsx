@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Platform, RefreshControl, ActivityIndicator,
-  Image, Alert,
+  Image, Alert, useColorScheme,
 } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,17 +14,21 @@ import { useApi } from '@/lib/hooks/use-api';
 import { PostsApi } from '@/lib/api/posts';
 import type { Post, PollOption } from '@/lib/api/types';
 
+import { MaxWidthContainer } from '@/components/tedx/max-width-container';
+
 /* ── Wordmark ─────────────────────────────────────────────────────────────── */
 function Wordmark() {
+  const colorScheme = useColorScheme();
+  const logo = colorScheme === 'dark'
+    ? require('@/assets/images/logo-light.png')
+    : require('@/assets/images/logo-dark.png');
+
   return (
-    <View style={{ flexDirection: 'column' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2 }}>
-        <Text style={{ fontWeight: '700', fontSize: 17, letterSpacing: -0.5, color: C.ink }}>pune</Text>
-        <Text style={{ fontWeight: '700', fontSize: 17, color: C.red }}>·</Text>
-        <Text style={{ fontWeight: '500', fontSize: 17, letterSpacing: -0.5, color: C.ink }}>ideas</Text>
-      </View>
-      <View style={{ height: 2, width: 24, backgroundColor: C.red, marginTop: 2 }} />
-    </View>
+    <Image
+      source={logo}
+      style={{ width: 114, height: 24 }}
+      resizeMode="contain"
+    />
   );
 }
 
@@ -309,91 +313,93 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.mist }}>
-      {/* App bar */}
-      <View style={styles.appBar}>
-        <Wordmark />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <View style={{ position: 'relative' }}>
-            <Text style={{ fontSize: 22 }}>🔔</Text>
-            <View style={styles.notifDot} />
+      <MaxWidthContainer style={{ backgroundColor: C.mist }}>
+        {/* App bar */}
+        <View style={styles.appBar}>
+          <Wordmark />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View style={{ position: 'relative' }}>
+              <Text style={{ fontSize: 22 }}>🔔</Text>
+              <View style={styles.notifDot} />
+            </View>
+            <TouchableOpacity onPress={() => router.navigate('/profile')} activeOpacity={0.7}>
+              <Avatar name={myName} size={30} url={myAvatarUrl} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => router.navigate('/profile')} activeOpacity={0.7}>
-            <Avatar name={myName} size={30} url={myAvatarUrl} />
-          </TouchableOpacity>
         </View>
-      </View>
 
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.red} />}
-      >
-        {/* Editorial masthead */}
-        <View style={styles.masthead}>
-          <View style={styles.mastheadLabel}>
-            <View style={styles.mastheadLine} />
-            <Text style={styles.mastheadMeta}>
-              Today's issue · {new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.red} />}
+        >
+          {/* Editorial masthead */}
+          <View style={styles.masthead}>
+            <View style={styles.mastheadLabel}>
+              <View style={styles.mastheadLine} />
+              <Text style={styles.mastheadMeta}>
+                Today's issue · {new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+              </Text>
+            </View>
+            <Text style={styles.mastheadTitle}>
+              {'What the community is\n'}
+              <Text style={{ fontStyle: 'italic' }}>thinking</Text>
+              {' today.'}
             </Text>
           </View>
-          <Text style={styles.mastheadTitle}>
-            {'What the community is\n'}
-            <Text style={{ fontStyle: 'italic' }}>thinking</Text>
-            {' today.'}
-          </Text>
-        </View>
 
-        {/* Section header */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderInner}>
-            <View style={styles.sectionDot} />
-            <Text style={styles.sectionLabel}>Latest from the community</Text>
-          </View>
-          {data && <Text style={styles.sectionCount}>{data.total} posts</Text>}
-        </View>
-
-        {/* Loading */}
-        {loading && posts.length === 0 && (
-          <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-            <ActivityIndicator color={C.red} size="large" />
-            <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, marginTop: 12, letterSpacing: 1 }}>LOADING…</Text>
-          </View>
-        )}
-
-        {/* Error */}
-        {error && (
-          <View style={styles.errorBox}>
-            <View style={[styles.cardAccent, { backgroundColor: C.red }]} />
-            <View style={{ padding: 16 }}>
-              <Text style={styles.errorTitle}>Couldn't load feed</Text>
-              <Text style={styles.errorMsg}>{error.message}</Text>
-              <TouchableOpacity onPress={handleRefresh} style={styles.retryBtn}>
-                <Text style={styles.retryText}>Try again</Text>
-              </TouchableOpacity>
+          {/* Section header */}
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderInner}>
+              <View style={styles.sectionDot} />
+              <Text style={styles.sectionLabel}>Latest from the community</Text>
             </View>
+            {data && <Text style={styles.sectionCount}>{data.total} posts</Text>}
           </View>
-        )}
 
-        {/* Empty */}
-        {!loading && !error && posts.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>✦</Text>
-            <Text style={styles.emptyTitle}>Nothing here yet</Text>
-            <Text style={styles.emptyBody}>Be the first to share an idea with the community.</Text>
-          </View>
-        )}
+          {/* Loading */}
+          {loading && posts.length === 0 && (
+            <View style={{ paddingVertical: 60, alignItems: 'center' }}>
+              <ActivityIndicator color={C.red} size="large" />
+              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, marginTop: 12, letterSpacing: 1 }}>LOADING…</Text>
+            </View>
+          )}
 
-        {/* Posts */}
-        {posts.map((post, i) => (
-          <LivePostCard
-            key={post.id}
-            post={post}
-            index={i}
-            onKudosToggled={handleKudosToggled}
-            onPollVoted={handlePollVoted}
-          />
-        ))}
-      </ScrollView>
+          {/* Error */}
+          {error && (
+            <View style={styles.errorBox}>
+              <View style={[styles.cardAccent, { backgroundColor: C.red }]} />
+              <View style={{ padding: 16 }}>
+                <Text style={styles.errorTitle}>Couldn't load feed</Text>
+                <Text style={styles.errorMsg}>{error.message}</Text>
+                <TouchableOpacity onPress={handleRefresh} style={styles.retryBtn}>
+                  <Text style={styles.retryText}>Try again</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Empty */}
+          {!loading && !error && posts.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>✦</Text>
+              <Text style={styles.emptyTitle}>Nothing here yet</Text>
+              <Text style={styles.emptyBody}>Be the first to share an idea with the community.</Text>
+            </View>
+          )}
+
+          {/* Posts */}
+          {posts.map((post, i) => (
+            <LivePostCard
+              key={post.id}
+              post={post}
+              index={i}
+              onKudosToggled={handleKudosToggled}
+              onPollVoted={handlePollVoted}
+            />
+          ))}
+        </ScrollView>
+      </MaxWidthContainer>
     </SafeAreaView>
   );
 }

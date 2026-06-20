@@ -1,4 +1,4 @@
-package com.anonymous.TEDxPune
+package com.tedxpune.community
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

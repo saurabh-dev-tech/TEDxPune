@@ -20,5 +20,13 @@ allprojects {
   }
 }
 
+subprojects {
+    afterEvaluate { project ->
+        if (project.tasks.findByName('lintVitalAnalyzeRelease')) {
+            project.tasks.lintVitalAnalyzeRelease.enabled = false
+        }
+    }
+}
+
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"

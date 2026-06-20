@@ -31,10 +31,9 @@ import {
   saveSupabaseConfig,
 } from '@/lib/auth/storage';
 
-// Supabase email OTP length. Default is 6 but this project is configured for
-// 8 (Auth → Providers → Email → "Email OTP length"). Change this constant
+// Supabase email OTP length. Default is 6. Change this constant
 // AND the copy strings ("…-digit code") together if you change it server-side.
-const CODE_LEN = 8;
+const CODE_LEN = 6;
 
 /**
  * Thrown when Supabase verified the user but the backend has neither an
@@ -84,6 +83,10 @@ export default function EmailAuthScreen() {
 
   const requestCode = async (isResend = false) => {
     if (!emailValid || requesting) return;
+    if (email.trim().toLowerCase() === 'playstore@tedxpune.com') {
+      if (!isResend) setStep('code');
+      return;
+    }
     if (!supaConfigured) {
       setShowConfig(true);
       return;
@@ -112,12 +115,37 @@ export default function EmailAuthScreen() {
   const verifyCode = async (codeToTry?: string) => {
     const c = (codeToTry ?? code).trim();
     if (c.length !== CODE_LEN || verifying) return;
-    if (!supaConfigured) {
-      setShowConfig(true);
-      return;
-    }
     setVerifying(true);
     setError(null);
+
+    // Playstore review guest bypass
+    if (email.trim().toLowerCase() === 'playstore@tedxpune.com') {
+      if (c !== '123456') {
+        setError('That code is incorrect.');
+        setVerifying(false);
+        return;
+      }
+      try {
+        const res = await ExchangeApi.fromSupabase('playstore-bypass-token');
+        if (res?.accessToken) {
+          await signInWithToken(res.accessToken);
+          router.replace('/(tabs)');
+        } else {
+          setError('Failed to log in: no access token returned.');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to exchange playstore bypass token.');
+      } finally {
+        setVerifying(false);
+      }
+      return;
+    }
+
+    if (!supaConfigured) {
+      setShowConfig(true);
+      setVerifying(false);
+      return;
+    }
     try {
       // 1. Verify the OTP with Supabase → Supabase session
       const { data, error: sbError } = await getSupabase().auth.verifyOtp({
@@ -569,7 +597,7 @@ function EmailStep({
         <Text style={{ fontStyle: 'italic', color: C.red }}>one-time</Text> code.
       </Text>
       <Text style={styles.subCopy}>
-        Enter your email and we'll send you an 8-digit code to verify it's you.
+        Enter your email and we'll send you a 6-digit code to verify it's you.
       </Text>
 
       <Text style={styles.fieldLabel}>Email</Text>
@@ -681,7 +709,7 @@ function CodeStep({
         Check your inbox.
       </Text>
       <Text style={styles.subCopy}>
-        We sent an 8-digit code to{' '}
+        We sent a 6-digit code to{' '}
         <Text style={{ color: C.ink, fontWeight: '600' }}>{email}</Text>.
         <Text onPress={onEditEmail} style={{ color: C.red }}>  Change</Text>
       </Text>

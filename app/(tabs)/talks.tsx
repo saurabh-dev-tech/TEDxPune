@@ -9,6 +9,7 @@ import { C, Fonts } from '@/constants/theme';
 import { TalkThumb } from '@/components/tedx/talk-thumb';
 import { VideosApi } from '@/lib/api/videos';
 import type { Playlist, Video } from '@/lib/api/types';
+import { MaxWidthContainer } from '@/components/tedx/max-width-container';
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 function formatDuration(dur: string | null | undefined): string {
@@ -166,103 +167,105 @@ export default function TalksScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={{ marginBottom: 14 }}>
-          <Text style={styles.headerEyebrow}>02 / talks</Text>
-          <Text style={styles.headerTitle}>Talks worth{'\n'}rewatching</Text>
+      <MaxWidthContainer style={{ backgroundColor: C.paper }}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={{ marginBottom: 14 }}>
+            <Text style={styles.headerEyebrow}>02 / talks</Text>
+            <Text style={styles.headerTitle}>Talks worth{'\n'}rewatching</Text>
+          </View>
+
+          {/* Playlist tabs */}
+          {loadingLists ? (
+            <ActivityIndicator color={C.red} size="small" style={{ alignSelf: 'flex-start', marginBottom: 4 }} />
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: 7 }}>
+                {playlists.map(p => (
+                  <TouchableOpacity
+                    key={p.id}
+                    onPress={() => setActiveId(p.id)}
+                    style={[styles.chip, activeId === p.id && styles.chipActive]}
+                  >
+                    <Text style={[styles.chipText, activeId === p.id && styles.chipTextActive]}>
+                      {p.playlistName}
+                    </Text>
+                    {(p.videoCount ?? 0) > 0 && (
+                      <Text style={[styles.chipCount, activeId === p.id && { color: 'rgba(255,255,255,0.6)' }]}>
+                        {' '}{p.videoCount}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          )}
         </View>
 
-        {/* Playlist tabs */}
-        {loadingLists ? (
-          <ActivityIndicator color={C.red} size="small" style={{ alignSelf: 'flex-start', marginBottom: 4 }} />
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{ flexDirection: 'row', gap: 7 }}>
-              {playlists.map(p => (
-                <TouchableOpacity
-                  key={p.id}
-                  onPress={() => setActiveId(p.id)}
-                  style={[styles.chip, activeId === p.id && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, activeId === p.id && styles.chipTextActive]}>
-                    {p.playlistName}
-                  </Text>
-                  {(p.videoCount ?? 0) > 0 && (
-                    <Text style={[styles.chipCount, activeId === p.id && { color: 'rgba(255,255,255,0.6)' }]}>
-                      {' '}{p.videoCount}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              ))}
+        <ScrollView
+          contentContainerStyle={{ padding: 14, paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.red} />}
+        >
+          {/* Error */}
+          {error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity onPress={() => activeId && fetchVideos(activeId)}>
+                <Text style={{ fontSize: 12, color: C.red, fontWeight: '600', marginTop: 6 }}>Retry</Text>
+              </TouchableOpacity>
             </View>
-          </ScrollView>
-        )}
-      </View>
+          )}
 
-      <ScrollView
-        contentContainerStyle={{ padding: 14, paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.red} />}
-      >
-        {/* Error */}
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={() => activeId && fetchVideos(activeId)}>
-              <Text style={{ fontSize: 12, color: C.red, fontWeight: '600', marginTop: 6 }}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Loading */}
-        {loadingVids && (
-          <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-            <ActivityIndicator color={C.red} size="large" />
-            <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, marginTop: 12, letterSpacing: 1 }}>
-              LOADING…
-            </Text>
-          </View>
-        )}
-
-        {/* Empty */}
-        {!loadingVids && !error && videos.length === 0 && (
-          <View style={{ paddingVertical: 48, alignItems: 'center' }}>
-            <Text style={{ fontSize: 28, marginBottom: 12 }}>📺</Text>
-            <Text style={{ fontFamily: Fonts.serif, fontSize: 18, color: C.ink, marginBottom: 6 }}>No talks yet</Text>
-            <Text style={{ fontSize: 13, color: C.muted, textAlign: 'center' }}>
-              Videos in this playlist will appear here.
-            </Text>
-          </View>
-        )}
-
-        {/* Featured */}
-        {!loadingVids && featured && (
-          <>
-            <Text style={styles.sectionLabel}>★  Editor's pick</Text>
-            <FeaturedCard video={featured} onPress={() => navigateToVideo(featured)} />
-          </>
-        )}
-
-        {/* Archive grid */}
-        {!loadingVids && grid.length > 0 && (
-          <>
-            <View style={styles.sectionRow}>
-              <Text style={styles.archiveLabel}>
-                {activePlaylist?.category ? `${activePlaylist.category} · ` : ''}
-                {grid.length} talk{grid.length !== 1 ? 's' : ''}
+          {/* Loading */}
+          {loadingVids && (
+            <View style={{ paddingVertical: 60, alignItems: 'center' }}>
+              <ActivityIndicator color={C.red} size="large" />
+              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, marginTop: 12, letterSpacing: 1 }}>
+                LOADING…
               </Text>
             </View>
-            <View style={styles.grid}>
-              {grid.map(v => (
-                <View key={v.id} style={{ width: '47%' }}>
-                  <VideoCard video={v} onPress={() => navigateToVideo(v)} />
-                </View>
-              ))}
+          )}
+
+          {/* Empty */}
+          {!loadingVids && !error && videos.length === 0 && (
+            <View style={{ paddingVertical: 48, alignItems: 'center' }}>
+              <Text style={{ fontSize: 28, marginBottom: 12 }}>📺</Text>
+              <Text style={{ fontFamily: Fonts.serif, fontSize: 18, color: C.ink, marginBottom: 6 }}>No talks yet</Text>
+              <Text style={{ fontSize: 13, color: C.muted, textAlign: 'center' }}>
+                Videos in this playlist will appear here.
+              </Text>
             </View>
-          </>
-        )}
-      </ScrollView>
+          )}
+
+          {/* Featured */}
+          {!loadingVids && featured && (
+            <>
+              <Text style={styles.sectionLabel}>★  Editor's pick</Text>
+              <FeaturedCard video={featured} onPress={() => navigateToVideo(featured)} />
+            </>
+          )}
+
+          {/* Archive grid */}
+          {!loadingVids && grid.length > 0 && (
+            <>
+              <View style={styles.sectionRow}>
+                <Text style={styles.archiveLabel}>
+                  {activePlaylist?.category ? `${activePlaylist.category} · ` : ''}
+                  {grid.length} talk{grid.length !== 1 ? 's' : ''}
+                </Text>
+              </View>
+              <View style={styles.grid}>
+                {grid.map(v => (
+                  <View key={v.id} style={{ width: '47%' }}>
+                    <VideoCard video={v} onPress={() => navigateToVideo(v)} />
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </MaxWidthContainer>
     </SafeAreaView>
   );
 }

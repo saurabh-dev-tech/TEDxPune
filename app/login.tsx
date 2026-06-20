@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
+  Image,
+  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -25,19 +27,17 @@ import {
 import { clearStoredApiUrl, saveApiUrl } from '@/lib/auth/storage';
 
 function Wordmark() {
+  const colorScheme = useColorScheme();
+  const logo = colorScheme === 'dark'
+    ? require('@/assets/images/logo-forlogin.png')
+    : require('@/assets/images/logo-forlogin.png');
+
   return (
-    <View style={{ flexDirection: 'column' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2 }}>
-        <Text style={{ fontWeight: '700', fontSize: 18, letterSpacing: -0.5, color: C.ink }}>
-          pune
-        </Text>
-        <Text style={{ fontWeight: '700', fontSize: 18, color: C.red }}>·</Text>
-        <Text style={{ fontWeight: '500', fontSize: 18, letterSpacing: -0.5, color: C.ink }}>
-          ideas
-        </Text>
-      </View>
-      <View style={{ height: 2, width: 26, backgroundColor: C.red, marginTop: 3 }} />
-    </View>
+    <Image
+      source={logo}
+      style={{ width: 185, height: 160 }}
+      resizeMode="contain"
+    />
   );
 }
 
@@ -294,7 +294,7 @@ export default function LoginScreen() {
           <Text style={styles.emailBtnText}>Continue with your email</Text>
         </TouchableOpacity>
 
-        {__DEV__ && (
+        {/* {__DEV__ && (
           <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'center', gap: 18 }}>
             <TouchableOpacity onPress={openServerSheet} disabled={busy}>
               <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, letterSpacing: 1, textTransform: 'uppercase' }}>
@@ -308,7 +308,7 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        )}
+        )} */}
 
         <Text style={styles.legal}>
           By continuing you agree to our{' '}

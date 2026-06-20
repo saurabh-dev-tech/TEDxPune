@@ -18,6 +18,7 @@ import { useApi } from '@/lib/hooks/use-api';
 import { UsersApi } from '@/lib/api/users';
 import type { User } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/context';
+import { MaxWidthContainer } from '@/components/tedx/max-width-container';
 
 const FILTER_CHIPS = ['All', 'Speakers', 'Attendees', 'Tech', 'Design', 'Climate'];
 
@@ -121,98 +122,108 @@ export default function DirectoryScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }}>
-      <View style={styles.header}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <View>
-            <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, letterSpacing: 1.5, textTransform: 'uppercase' }}>
-              04 / community
-            </Text>
-            <Text style={{ fontFamily: Fonts.serif, fontSize: 28, fontWeight: '400', letterSpacing: -0.6, marginTop: 2, color: C.ink }}>
-              Directory
-            </Text>
+      <MaxWidthContainer style={{ backgroundColor: C.paper }}>
+        <View style={styles.header}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <View>
+              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                04 / community
+              </Text>
+              <Text style={{ fontFamily: Fonts.serif, fontSize: 28, fontWeight: '400', letterSpacing: -0.6, marginTop: 2, color: C.ink }}>
+                Directory
+              </Text>
+            </View>
+            <View style={styles.memberCountBadge}>
+              <Text style={{ fontFamily: Fonts.mono, fontSize: 11, color: C.slate }}>
+                {data ? `${data.total} members` : '… members'}
+              </Text>
+            </View>
           </View>
-          <View style={styles.memberCountBadge}>
-            <Text style={{ fontFamily: Fonts.mono, fontSize: 11, color: C.slate }}>
-              {data ? `${data.total} members` : '… members'}
-            </Text>
-          </View>
-        </View>
 
-        <View style={styles.searchBar}>
-          <Text style={{ fontSize: 16, color: C.muted, marginRight: 8 }}>🔍</Text>
-          <TextInput
-            style={{ flex: 1, fontSize: 14, color: C.ink }}
-            placeholder="Search by name or headline…"
-            placeholderTextColor={C.muted}
-            value={query}
-            onChangeText={setQuery}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          <Text style={{ fontSize: 14, color: C.slate }}>⊞</Text>
-        </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 14 }}>
-          <View style={{ flexDirection: 'row', gap: 7 }}>
-            {FILTER_CHIPS.map(chip => (
-              <TouchableOpacity
-                key={chip}
-                onPress={() => setActiveFilter(chip)}
-                style={[styles.chip, activeFilter === chip && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, activeFilter === chip && styles.chipTextActive]}>
-                  {chip}
-                </Text>
+          <View style={styles.searchBar}>
+            <Text style={{ fontSize: 16, color: C.muted, marginRight: 8 }}>🔍</Text>
+            <TextInput
+              style={{ flex: 1, fontSize: 14, color: C.ink }}
+              placeholder="Search by name or headline…"
+              placeholderTextColor={C.muted}
+              value={query}
+              onChangeText={setQuery}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={() => setQuery('')}>
+                <Text style={{ fontSize: 14, color: C.slate, fontWeight: '500' }}>Clear</Text>
               </TouchableOpacity>
-            ))}
+            )}
           </View>
+
+          {/* Filters */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 6, paddingBottom: 2 }}>
+              {FILTER_CHIPS.map(chip => {
+                const active = activeFilter === chip;
+                return (
+                  <TouchableOpacity
+                    key={chip}
+                    onPress={() => setActiveFilter(chip)}
+                    style={[styles.filterChip, active && styles.filterChipActive]}
+                  >
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                      {chip}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.red} />}
+        >
+          {/* Loading */}
+          {loading && members.length === 0 && (
+            <View style={{ paddingVertical: 60, alignItems: 'center' }}>
+              <ActivityIndicator color={C.red} size="large" />
+              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, marginTop: 12, letterSpacing: 1 }}>LOADING…</Text>
+            </View>
+          )}
+
+          {/* Error */}
+          {error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>Couldn't load directory</Text>
+              <Text style={styles.errorDesc}>{error.message}</Text>
+              <TouchableOpacity onPress={handleRefresh} style={styles.retryBtn}>
+                <Text style={styles.retryText}>Try again</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Empty state */}
+          {!loading && !error && filtered.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={{ fontSize: 32, marginBottom: 12 }}>👥</Text>
+              <Text style={{ fontFamily: Fonts.serif, fontSize: 18, color: C.ink, marginBottom: 6 }}>No members found</Text>
+              <Text style={{ fontSize: 13, color: C.muted, textAlign: 'center', paddingHorizontal: 24 }}>
+                We couldn't find anyone matching your search or filters. Try adjusting them.
+              </Text>
+            </View>
+          )}
+
+          {/* Grid list */}
+          {!loading && filtered.length > 0 && (
+            <View style={{ gap: 10 }}>
+              {filtered.map(member => (
+                <MemberCard key={member.id} member={member} />
+              ))}
+            </View>
+          )}
         </ScrollView>
-      </View>
-
-      <View style={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 6, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <Text style={{ fontSize: 11, fontWeight: '600', color: C.slate, letterSpacing: 1, textTransform: 'uppercase', fontFamily: Fonts.mono }}>
-          {query || activeFilter !== 'All' ? `${filtered.length} match${filtered.length === 1 ? '' : 'es'}` : 'Suggested for you'}
-        </Text>
-        <TouchableOpacity onPress={handleRefresh}>
-          <Text style={{ fontSize: 12, color: C.red, fontWeight: '500' }}>Refresh</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.red} />
-        }
-      >
-        {loading && members.length === 0 && (
-          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-            <ActivityIndicator color={C.red} />
-          </View>
-        )}
-
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.red, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
-              Couldn't load directory
-            </Text>
-            <Text style={{ fontSize: 13, color: C.slate, marginBottom: 10 }}>{error.message}</Text>
-            <TouchableOpacity onPress={handleRefresh} style={styles.retryBtn}>
-              <Text style={{ color: C.paper, fontSize: 12, fontWeight: '600' }}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {!loading && !error && filtered.length === 0 && (
-          <Text style={{ fontSize: 14, color: C.muted, fontStyle: 'italic', textAlign: 'center', marginTop: 40 }}>
-            No members match your search.
-          </Text>
-        )}
-
-        {filtered.map((m, i) => (
-          <MemberCard key={m.id} member={m} featured={i === 0 && !query && activeFilter === 'All'} />
-        ))}
-      </ScrollView>
+      </MaxWidthContainer>
     </SafeAreaView>
   );
 }
@@ -251,6 +262,17 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: C.ink, borderColor: C.ink },
   chipText: { fontSize: 13, fontWeight: '500', color: C.slate },
   chipTextActive: { color: C.paper },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: C.paper,
+    borderWidth: 1,
+    borderColor: C.hair,
+  },
+  filterChipActive: { backgroundColor: C.ink, borderColor: C.ink },
+  filterChipText: { fontSize: 13, fontWeight: '500', color: C.slate },
+  filterChipTextActive: { color: C.paper },
   memberCard: {
     backgroundColor: C.paper,
     borderWidth: 1,
@@ -299,10 +321,33 @@ const styles = StyleSheet.create({
     borderColor: `${C.red}30`,
     alignItems: 'flex-start',
   },
+  errorText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: C.red,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  errorDesc: {
+    fontSize: 13,
+    color: C.slate,
+    marginBottom: 10,
+  },
+  retryText: {
+    color: C.paper,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   retryBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     backgroundColor: C.red,
     borderRadius: 6,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
 });
