@@ -14,6 +14,7 @@ function normaliseUser(raw: any): User {
     website:    raw.website     ?? undefined,
     role:       raw.role        ?? undefined,
     postsCount: raw.posts_count ?? raw.postsCount  ?? undefined,
+    consent:    raw.consent     ?? raw.has_consented ?? raw.hasConsented ?? false,
     createdAt:  raw.created_at  ?? raw.createdAt   ?? undefined,
     updatedAt:  raw.updated_at  ?? raw.updatedAt   ?? undefined,
     linkedin:   raw.linkedin    ?? undefined,
@@ -38,6 +39,7 @@ export const UsersApi = {
     if (payload.avatarUrl !== undefined) body.avatar_url = payload.avatarUrl;
     if (payload.location  !== undefined) body.location   = payload.location;
     if (payload.website   !== undefined) body.website    = payload.website;
+    if (payload.consent   !== undefined) body.consent    = payload.consent;
     if (payload.linkedin  !== undefined) body.linkedin   = payload.linkedin;
     if (payload.whatsapp  !== undefined) body.whatsapp   = payload.whatsapp;
     if (payload.instagram !== undefined) body.instagram  = payload.instagram;

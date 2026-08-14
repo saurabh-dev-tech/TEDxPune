@@ -98,7 +98,7 @@ export default function OAuthScreen() {
   const { signInWithToken } = useAuth();
 
   const url = authUrlFor(provider);
-  const webRef = useRef<WebView | null>(null);
+  const webRef = useRef<any>(null);
   const [signing, setSigning] = useState(false);
   // The WebView source is controlled, so we can swap it when we want to
   // redirect (e.g. localhost-rewrite) without going through document.location.

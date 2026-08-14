@@ -11,6 +11,7 @@ export interface User {
   website?: string;
   role?: string;
   postsCount?: number;
+  consent?: boolean;
   createdAt?: string;
   updatedAt?: string;
   linkedin?: string;
@@ -26,6 +27,7 @@ export interface UpdateUserPayload {
   avatarUrl?: string;
   location?: string;
   website?: string;
+  consent?: boolean;
   linkedin?: string;
   whatsapp?: string;
   instagram?: string;

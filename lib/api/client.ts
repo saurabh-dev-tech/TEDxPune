@@ -33,6 +33,13 @@ export function setUnauthorizedHandler(fn: UnauthorizedHandler | null) {
   unauthorizedHandler = fn;
 }
 
+// Subscribers notified when API errors occur (for global toasts/alerts)
+export type ApiErrorHandler = (error: ApiError) => void;
+let apiErrorHandler: ApiErrorHandler | null = null;
+export function setApiErrorHandler(fn: ApiErrorHandler | null) {
+  apiErrorHandler = fn;
+}
+
 function buildQuery(query?: RequestOptions['query']): string {
   if (!query) return '';
   const params = Object.entries(query)
@@ -79,15 +86,17 @@ export async function apiRequest<T>(
     clearTimeout(timeoutId);
     if (err?.name === 'AbortError') {
       console.warn(`[api] ${method} ${fullUrl} — timed out after ${API_TIMEOUT_MS}ms`);
-      throw new ApiError(0, `Timed out reaching ${fullUrl}`);
+      const apiErr = new ApiError(0, `Timed out reaching server`);
+      apiErrorHandler?.(apiErr);
+      throw apiErr;
     }
-    // Make network-level failures debuggable: log the URL we couldn't reach
-    // so it's obvious whether it's localhost, a wrong LAN IP, etc.
     console.warn(
       `[api] ${method} ${fullUrl} — fetch failed: ${err?.message || 'unknown'}\n` +
       `       Backend reachable? Check: curl ${fullUrl}`
     );
-    throw new ApiError(0, `Can't reach ${fullUrl}`);
+    const apiErr = new ApiError(0, `Network error: Unable to connect to server`);
+    apiErrorHandler?.(apiErr);
+    throw apiErr;
   }
   clearTimeout(timeoutId);
 
@@ -109,7 +118,6 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    // 401 → token invalid/expired — clear and notify the auth layer
     if (response.status === 401 && !noAuth) {
       await clearToken();
       unauthorizedHandler?.();
@@ -118,7 +126,11 @@ export async function apiRequest<T>(
       (typeof payload === 'object' && payload?.message) ||
       (typeof payload === 'string' && payload) ||
       `Request failed with status ${response.status}`;
-    throw new ApiError(response.status, String(message), payload);
+    const apiErr = new ApiError(response.status, String(message), payload);
+    if (response.status >= 500 || response.status === 0) {
+      apiErrorHandler?.(apiErr);
+    }
+    throw apiErr;
   }
 
   return payload as T;
