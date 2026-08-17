@@ -22,13 +22,18 @@ interface ConsentModalProps {
 export function ConsentModal({ visible, userId, onConsentAccepted }: ConsentModalProps) {
   const { isDark } = useTheme();
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleAccept = async () => {
     if (submitting) return;
     setSubmitting(true);
+    setErrorMsg(null);
     try {
       await saveUserConsent(userId);
-      onConsentAccepted();
+      await onConsentAccepted();
+    } catch (err: any) {
+      console.error('[ConsentModal] Error saving consent:', err);
+      setErrorMsg(err?.message || 'Failed to save consent. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -84,6 +89,11 @@ export function ConsentModal({ visible, userId, onConsentAccepted }: ConsentModa
         </ScrollView>
 
         <View style={[styles.footer, isDark ? styles.footerDark : styles.footerLight]}>
+          {errorMsg ? (
+            <Text style={{ color: C.red, fontSize: 13, marginBottom: 10, textAlign: 'center' }}>
+              {errorMsg}
+            </Text>
+          ) : null}
           <TouchableOpacity
             style={styles.button}
             onPress={handleAccept}

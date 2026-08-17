@@ -58,7 +58,9 @@ export async function apiRequest<T>(
     Accept: 'application/json',
   };
 
-  if (body !== undefined) {
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
+  if (body !== undefined && !isFormData) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -79,7 +81,7 @@ export async function apiRequest<T>(
     response = await fetch(fullUrl, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData ? (body as any) : body !== undefined ? JSON.stringify(body) : undefined,
       signal: signalToUse,
     });
   } catch (err: any) {

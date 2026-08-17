@@ -12,6 +12,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tedxpune.community",
       "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to let you select and update your profile picture.",
+        "NSPhotoLibraryAddUsageDescription": "This app requires permission to save photos to your photo library.",
+        "NSCameraUsageDescription": "This app requires access to your camera to let you take a new profile picture.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoadsInWebContent": true,
           "NSAllowsLocalNetworking": true,
@@ -52,7 +55,14 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "This app requires access to your photo library to let you select and update your profile picture.",
+          "cameraPermission": "This app requires access to your camera to let you take a new profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

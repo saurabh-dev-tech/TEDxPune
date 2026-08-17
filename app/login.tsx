@@ -203,14 +203,14 @@ export default function LoginScreen() {
       {/* Top rail */}
       <View style={styles.topRail}>
         <Wordmark />
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, letterSpacing: 0.5, lineHeight: 16 }}>
-            v1.0 · mvp
+        <TouchableOpacity onPress={openServerSheet} style={{ alignItems: 'flex-end' }}>
+          <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.red, letterSpacing: 0.5, lineHeight: 16 }}>
+            dev · server
           </Text>
           <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, letterSpacing: 0.5, lineHeight: 16 }}>
             est. pune
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Hero */}
@@ -235,16 +235,6 @@ export default function LoginScreen() {
 
       {/* Auth buttons */}
       <View style={styles.authBlock}>
-        {/* <TouchableOpacity
-          style={[styles.appleBtn, busy && { opacity: 0.6 }]}
-          onPress={handleApple}
-          disabled={busy}
-          activeOpacity={0.88}
-        >
-          <Text style={{ color: C.paper, fontSize: 16, marginRight: 4 }}></Text>
-          <Text style={styles.appleBtnText}>Continue with Apple</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.linkedInBtn, busy && { opacity: 0.6 }]}
           onPress={handleLinkedIn}
@@ -275,7 +265,7 @@ export default function LoginScreen() {
               <Text style={styles.googleBtnText}>Continue with Google</Text>
             </>
           )}
-        </TouchableOpacity> */}
+        </TouchableOpacity>
 
         <View style={styles.dividerRow}>
           <View style={styles.dividerLine} />
@@ -468,11 +458,11 @@ const styles = StyleSheet.create({
   hero: { flex: 1, paddingHorizontal: 28, justifyContent: 'center' },
   headline: {
     fontFamily: Fonts.serif,
-    fontSize: 44,
-    lineHeight: 44,
-    letterSpacing: -1.2,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.6,
     color: C.ink,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   subCopy: { fontSize: 14.5, lineHeight: 22, color: C.slate, maxWidth: 300 },
   authBlock: { paddingHorizontal: 28, paddingBottom: Platform.OS === 'ios' ? 8 : 28 },

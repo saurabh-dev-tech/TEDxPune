@@ -7,6 +7,7 @@ import {
 import YoutubePlayer from 'react-native-youtube-iframe';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { C, Fonts } from '@/constants/theme';
 import { Avatar } from '@/components/tedx/avatar';
 import { useAuth } from '@/lib/auth/context';
@@ -129,9 +130,14 @@ function KudosButton({
       style={[styles.kudosBtn, kudoed && styles.kudosBtnActive]}
       activeOpacity={0.75}
     >
-      <Text style={{ fontSize: 14, marginRight: 5 }}>{kudoed ? '👏' : '🤝'}</Text>
-      <Text style={[styles.kudosLabel, kudoed && { color: C.red }]}>
-        {kudosCount > 0 ? `${kudosCount}` : ''}
+      <Ionicons
+        name={kudoed ? 'thumbs-up' : 'thumbs-up-outline'}
+        size={16}
+        color={kudoed ? C.red : C.slate}
+        style={{ marginRight: 6 }}
+      />
+      <Text style={[styles.kudosLabel, kudoed && { color: C.red, fontWeight: '600' }]}>
+        {kudosCount}
       </Text>
     </TouchableOpacity>
   );
@@ -257,8 +263,8 @@ function LivePostCard({
           busy={kudosBusy}
         />
         <View style={styles.footerRight}>
-          <View style={styles.footerLine} />
-          <Text style={styles.postIndex}>{postNum}</Text>
+          {/* <View style={styles.footerLine} /> */}
+          {/* <Text style={styles.postIndex}>{postNum}</Text> */}
         </View>
       </View>
     </View>
@@ -318,10 +324,15 @@ export default function FeedScreen() {
         <View style={styles.appBar}>
           <Wordmark />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View style={{ position: 'relative' }}>
+            <TouchableOpacity
+              onPress={() => router.push('/notifications')}
+              activeOpacity={0.7}
+              style={{ position: 'relative' }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Text style={{ fontSize: 22 }}>🔔</Text>
               <View style={styles.notifDot} />
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.navigate('/profile')} activeOpacity={0.7}>
               <Avatar name={myName} size={30} url={myAvatarUrl} />
             </TouchableOpacity>
@@ -342,9 +353,7 @@ export default function FeedScreen() {
               </Text>
             </View>
             <Text style={styles.mastheadTitle}>
-              {'What the community is\n'}
-              <Text style={{ fontStyle: 'italic' }}>thinking</Text>
-              {' today.'}
+              {'Hi ' + myName + '!'}
             </Text>
           </View>
 

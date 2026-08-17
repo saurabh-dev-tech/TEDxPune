@@ -13,12 +13,14 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { C, Fonts } from '@/constants/theme';
 import { Avatar } from '@/components/tedx/avatar';
 import { useAuth } from '@/lib/auth/context';
 import { UsersApi } from '@/lib/api/users';
 import { nameFromClaims, pictureFromClaims } from '@/lib/auth/jwt';
 import { MaxWidthContainer } from '@/components/tedx/max-width-container';
+import { pickProfileImage, uploadImageToCloudinary } from '@/lib/cloudinary';
 
 function SectionHeader({ children }: { children: string }) {
   return (
@@ -54,9 +56,11 @@ function InfoRow({ icon, value }: { icon: string; value: string }) {
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, claims, refreshUser, setUser, signOut } = useAuth();
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Edit field state
   const [editName, setEditName] = useState('');
@@ -73,6 +77,36 @@ export default function ProfileScreen() {
   useEffect(() => {
     refreshUser().catch(() => {});
   }, [refreshUser]);
+
+  const handlePickAndUploadAvatar = async () => {
+    if (uploadingAvatar) return;
+    try {
+      const asset = await pickProfileImage();
+      if (!asset) return; // User cancelled
+
+      setUploadingAvatar(true);
+      const mimeType = asset.mimeType || 'image/jpeg';
+      const fileName = asset.fileName || 'profile.jpg';
+
+      let updatedUser;
+      try {
+        const cloudUrl = await uploadImageToCloudinary(asset);
+        updatedUser = await UsersApi.updateMe({ avatarUrl: cloudUrl });
+      } catch (cloudErr) {
+        console.warn('[AvatarUpload] Cloudinary upload failed, falling back to backend upload:', cloudErr);
+        updatedUser = await UsersApi.uploadAvatar(asset.uri, mimeType, fileName);
+      }
+
+      setUser(updatedUser);
+      setEditAvatarUrl(updatedUser.avatarUrl || '');
+      Alert.alert('Success', 'Profile photo updated successfully!');
+    } catch (err: any) {
+      console.error('[AvatarUpload] Error:', err);
+      Alert.alert('Upload failed', err?.message || 'Could not upload avatar. Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const openEdit = () => {
     setEditName(user?.fullName ?? '');
@@ -116,7 +150,14 @@ export default function ProfileScreen() {
   const handleSignOut = () => {
     Alert.alert('Sign out?', "You'll need to sign in again to access the community.", [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+      { 
+        text: 'Sign out', 
+        style: 'destructive', 
+        onPress: async () => {
+          await signOut();
+          router.replace('/login');
+        }
+      },
     ]);
   };
 
@@ -166,7 +207,35 @@ export default function ProfileScreen() {
 
             {/* Avatar + Edit button */}
             <View style={{ marginTop: -38, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-              <Avatar name={displayName} size={86} ring url={avatarUrl} />
+              <TouchableOpacity
+                onPress={handlePickAndUploadAvatar}
+                disabled={uploadingAvatar}
+                activeOpacity={0.8}
+                style={{ position: 'relative' }}
+              >
+                <Avatar name={displayName} size={86} ring url={avatarUrl} />
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: 2,
+                    right: 2,
+                    backgroundColor: C.red,
+                    borderRadius: 14,
+                    width: 28,
+                    height: 28,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 2,
+                    borderColor: C.paper,
+                  }}
+                >
+                  {uploadingAvatar ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={{ fontSize: 13, color: '#FFFFFF' }}>📷</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.editBtn} onPress={openEdit}>
                 <Text style={{ color: C.paper, fontWeight: '600', fontSize: 13 }}>Edit profile</Text>
               </TouchableOpacity>
@@ -284,10 +353,40 @@ export default function ProfileScreen() {
 
               {/* Avatar preview */}
               <View style={{ alignItems: 'center', marginBottom: 24 }}>
-                <Avatar name={editName || displayName} size={80} ring url={editAvatarUrl || null} />
-                <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, marginTop: 8, letterSpacing: 1 }}>
-                  PROFILE PHOTO
-                </Text>
+                <TouchableOpacity
+                  onPress={handlePickAndUploadAvatar}
+                  disabled={uploadingAvatar || saving}
+                  activeOpacity={0.8}
+                  style={{ alignItems: 'center' }}
+                >
+                  <View style={{ position: 'relative' }}>
+                    <Avatar name={editName || displayName} size={80} ring url={editAvatarUrl || null} />
+                    <View
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        right: 0,
+                        backgroundColor: C.red,
+                        borderRadius: 12,
+                        width: 26,
+                        height: 26,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 2,
+                        borderColor: C.paper,
+                      }}
+                    >
+                      {uploadingAvatar ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={{ fontSize: 12, color: '#FFFFFF' }}>📷</Text>
+                      )}
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 12, color: C.red, fontWeight: '600', marginTop: 8 }}>
+                    {uploadingAvatar ? 'Uploading photo...' : 'Change profile photo'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               {/* ── Basic ── */}
@@ -305,7 +404,7 @@ export default function ProfileScreen() {
                   editable={!saving}
                 />
 
-                <FieldLabel>Avatar URL</FieldLabel>
+                {/* <FieldLabel>Avatar URL</FieldLabel>
                 <TextInput
                   style={styles.field}
                   value={editAvatarUrl}
@@ -316,7 +415,7 @@ export default function ProfileScreen() {
                   autoCorrect={false}
                   keyboardType="url"
                   editable={!saving}
-                />
+                /> */}
               </View>
 
               {/* ── About ── */}

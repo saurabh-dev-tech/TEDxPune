@@ -81,6 +81,68 @@ export default function EmailAuthScreen() {
 
   const emailValid = EMAIL_RE.test(email.trim());
 
+  const checkEmailInDb = async (rawEmail: string): Promise<boolean> => {
+    const cleanEmail = rawEmail.trim().toLowerCase();
+    const supabase = getSupabase();
+
+    try {
+      // 1. Check whitelisted_users table with "Attendee Email" column
+      const { data: wData1, error: wErr1 } = await supabase
+        .from('whitelisted_users')
+        .select('*')
+        .ilike('Attendee Email', cleanEmail)
+        .limit(1);
+
+      if (!wErr1 && wData1 && wData1.length > 0) {
+        return true;
+      }
+
+      // 1b. Fuzzy match (in case of leading/trailing spaces in DB records)
+      const { data: wData1b, error: wErr1b } = await supabase
+        .from('whitelisted_users')
+        .select('*')
+        .ilike('Attendee Email', `%${cleanEmail}%`)
+        .limit(1);
+
+      if (!wErr1b && wData1b && wData1b.length > 0) {
+        return true;
+      }
+
+      // 2. Check whitelisted_users table with "email" column (fallback)
+      const { data: wData2, error: wErr2 } = await supabase
+        .from('whitelisted_users')
+        .select('*')
+        .ilike('email', cleanEmail)
+        .limit(1);
+
+      if (!wErr2 && wData2 && wData2.length > 0) {
+        return true;
+      }
+
+      // 3. Check users table with "email" column
+      const { data: uData, error: uErr } = await supabase
+        .from('users')
+        .select('id, email')
+        .ilike('email', cleanEmail)
+        .limit(1);
+
+      if (!uErr && uData && uData.length > 0) {
+        return true;
+      }
+
+      // If RLS restricted public anon access, allow proceeding so server (service role) validates
+      if (wErr1 || wErr1b || wErr2 || uErr) {
+        console.warn('[email-auth] Whitelist DB query warning, deferring to server auth:', { wErr1, wErr1b, wErr2, uErr });
+        return true;
+      }
+    } catch (err) {
+      console.warn('[email-auth] DB whitelist check exception:', err);
+      return true;
+    }
+
+    return false;
+  };
+
   const requestCode = async (isResend = false) => {
     if (!emailValid || requesting) return;
     if (email.trim().toLowerCase() === 'playstore@tedxpune.com') {
@@ -94,6 +156,12 @@ export default function EmailAuthScreen() {
     setRequesting(true);
     setError(null);
     try {
+      const allowed = await checkEmailInDb(email);
+      if (!allowed) {
+        setError('You are not part of the tribe. Only ticket holders and whitelisted members can log in.');
+        return;
+      }
+
       const { error: sbError } = await getSupabase().auth.signInWithOtp({
         email: email.trim(),
         options: {
@@ -233,7 +301,11 @@ export default function EmailAuthScreen() {
 
     // Backend-side exchange error
     if (err instanceof ApiError) {
-      if (err.status === 401 || err.status === 403) {
+      if (err.status === 403 || err.message?.toLowerCase().includes('not part of the tribe')) {
+        setError('You are not part of the tribe. Only ticket holders and whitelisted members can log in.');
+        return;
+      }
+      if (err.status === 401) {
         setError('Your account isn\'t allowed in this community. Contact an organizer.');
         return;
       }
