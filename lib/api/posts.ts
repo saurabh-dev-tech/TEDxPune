@@ -23,6 +23,22 @@ function normalisePost(raw: any): Post {
     createdAt:       raw.created_at ?? raw.createdAt ?? '',
     kudosCount:      Number(raw.kudos_count ?? raw.kudosCount ?? 0),
     kudoed:          raw.user_kudoed ?? raw.kudoed ?? false,
+    commentsCount:   Number(raw.comments_count ?? raw.commentsCount ?? 0),
+    author: {
+      id:        raw.author?.id ?? '',
+      fullName:  raw.author?.full_name  ?? raw.author?.fullName  ?? '',
+      headline:  raw.author?.headline   ?? undefined,
+      avatarUrl: raw.author?.avatar_url ?? raw.author?.avatarUrl ?? undefined,
+    },
+  };
+}
+
+function normaliseComment(raw: any): Comment {
+  return {
+    id:        raw.id,
+    body:      raw.body ?? '',
+    parentId:  raw.parent_id ?? raw.parentId ?? null,
+    createdAt: raw.created_at ?? raw.createdAt ?? '',
     author: {
       id:        raw.author?.id ?? '',
       fullName:  raw.author?.full_name  ?? raw.author?.fullName  ?? '',
@@ -36,6 +52,10 @@ export const PostsApi = {
   feed: async (page = 1, limit = 20): Promise<Paginated<Post>> => {
     const raw = await api.get<any>('/posts', { query: { page, limit } });
     const items: any[] = raw.items ?? raw.docs ?? raw.data ?? [];
+    if (items.length > 0) {
+      console.log("=== RAW POST ITEM DEBUG ===");
+      console.log(JSON.stringify(items[0], null, 2));
+    }
     const total = raw.total ?? raw.totalDocs ?? 0;
     return {
       data:    items.map(normalisePost),
@@ -44,6 +64,11 @@ export const PostsApi = {
       limit:   raw.limit ?? limit,
       hasMore: raw.hasMore ?? raw.hasNextPage ?? (page * limit < total),
     };
+  },
+
+  get: async (id: string): Promise<Post> => {
+    const raw = await api.get<any>(`/posts/${id}`);
+    return normalisePost(raw.data ?? raw);
   },
 
   create: (body: string) => api.post<Post>('/posts', { body }),
@@ -59,9 +84,22 @@ export const PostsApi = {
   votePoll: (postId: string, optionId: string) =>
     api.post<void>(`/posts/${postId}/poll/vote`, { option_id: optionId }),
 
-  comments: (id: string) =>
-    api.get<{ data: Comment[]; total: number }>(`/posts/${id}/comments`),
+  comments: async (id: string): Promise<{ data: Comment[]; total: number }> => {
+    const raw = await api.get<any>(`/posts/${id}/comments`);
+    const items: any[] = raw.items ?? raw.data ?? raw ?? [];
+    const total = raw.total ?? items.length;
+    return {
+      data: items.map(normaliseComment),
+      total,
+    };
+  },
 
-  addComment: (postId: string, body: string, parentId?: string | null) =>
-    api.post<Comment>(`/posts/${postId}/comments`, { body, parentId: parentId ?? null }),
+  addComment: async (postId: string, body: string, parentId?: string | null): Promise<Comment> => {
+    const data: Record<string, any> = { body };
+    if (parentId) {
+      data.parentId = parentId;
+    }
+    const raw = await api.post<any>(`/posts/${postId}/comments`, data);
+    return normaliseComment(raw.data ?? raw);
+  },
 };

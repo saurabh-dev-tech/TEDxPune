@@ -2,9 +2,11 @@ import React, { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Platform, RefreshControl, ActivityIndicator,
-  Image, Alert, useColorScheme,
+  Image, Alert, useColorScheme, Modal, Dimensions,
+  TextInput, KeyboardAvoidingView,
 } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
+import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,23 +15,27 @@ import { Avatar } from '@/components/tedx/avatar';
 import { useAuth } from '@/lib/auth/context';
 import { useApi } from '@/lib/hooks/use-api';
 import { PostsApi } from '@/lib/api/posts';
-import type { Post, PollOption } from '@/lib/api/types';
+import type { Post, PollOption, Comment } from '@/lib/api/types';
 
 import { MaxWidthContainer } from '@/components/tedx/max-width-container';
 
 /* ── Wordmark ─────────────────────────────────────────────────────────────── */
 function Wordmark() {
   const colorScheme = useColorScheme();
+  const textColor = colorScheme === 'dark' ? '#ffffff' : '#000000';
   const logo = colorScheme === 'dark'
-    ? require('@/assets/images/logo-light.png')
-    : require('@/assets/images/logo-dark.png');
+    ? require('@/assets/images/logo-white.png')
+    : require('@/assets/images/logo-black.png');
 
   return (
-    <Image
-      source={logo}
-      style={{ width: 114, height: 24 }}
-      resizeMode="contain"
-    />
+    <View style={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+
+      <Image
+        source={logo}
+        style={{ width: 180, height: 60 }}
+        resizeMode="contain"
+      />
+    </View>
   );
 }
 
@@ -152,6 +158,7 @@ function LivePostCard({
   onKudosToggled: (id: string, kudoed: boolean, kudosCount: number) => void;
   onPollVoted: (id: string, optionId: string) => void;
 }) {
+  const router = useRouter();
   const [kudosBusy, setKudosBusy] = useState(false);
   const [pollBusy,  setPollBusy]  = useState(false);
   const postNum = String(index + 1).padStart(2, '0');
@@ -191,53 +198,95 @@ function LivePostCard({
       {/* Colour accent bar */}
       <View style={[styles.cardAccent, { backgroundColor: accent }]} />
 
-      {/* Author row */}
-      <View style={styles.cardHeader}>
-        <Avatar name={post.author.fullName} size={42} url={post.author.avatarUrl} />
-        <View style={styles.authorInfo}>
-          <Text style={styles.authorName}>{post.author.fullName}</Text>
-          {!!post.author.headline && (
-            <Text style={styles.authorHeadline}>{post.author.headline}</Text>
-          )}
+      <TouchableOpacity
+        activeOpacity={0.95}
+        onPress={() => router.push(`/post/${post.id}`)}
+      >
+        {/* Author row */}
+        <View style={styles.cardHeader}>
+          <Avatar name={post.author.fullName} size={42} url={post.author.avatarUrl} />
+          <View style={styles.authorInfo}>
+            <Text style={styles.authorName}>{post.author.fullName}</Text>
+            {!!post.author.headline && (
+              <Text style={styles.authorHeadline}>{post.author.headline}</Text>
+            )}
+          </View>
+          <View style={styles.timePill}>
+            <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
+          </View>
         </View>
-        <View style={styles.timePill}>
-          <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
-        </View>
-      </View>
 
-      {/* Body */}
-      <Text style={styles.bodyText}>{post.body}</Text>
+        {/* Body */}
+        <Text style={styles.bodyText}>{post.body}</Text>
+      </TouchableOpacity>
 
       {/* ── Image ── */}
       {post.postType === 'image' && !!post.imageUrl && (
-        <View style={styles.mediaContainer}>
+        <TouchableOpacity
+          activeOpacity={0.95}
+          onPress={() => router.push(`/post/${post.id}`)}
+          style={styles.mediaContainer}
+        >
           <Image
             source={{ uri: post.imageUrl }}
             style={styles.mediaImage}
             resizeMode="cover"
           />
-        </View>
+        </TouchableOpacity>
       )}
 
       {/* ── Video ── */}
       {post.postType === 'video' && !!post.videoUrl && (() => {
         const ytId = extractYoutubeId(post.videoUrl);
-        if (!ytId) return null;
+        if (ytId) {
+          return (
+            <View style={styles.videoContainer}>
+              <YoutubePlayer
+                height={200}
+                videoId={ytId}
+                play={false}
+                webViewProps={{
+                  allowsInlineMediaPlayback: true,
+                  mediaPlaybackRequiresUserAction: true,
+                }}
+                initialPlayerParams={{
+                  modestbranding: true,
+                  rel: false,
+                  preventFullScreen: false,
+                }}
+              />
+            </View>
+          );
+        }
+
+        // Fallback for direct video links (e.g. Cloudinary, Supabase)
         return (
           <View style={styles.videoContainer}>
-            <YoutubePlayer
-              height={200}
-              videoId={ytId}
-              play={false}
-              webViewProps={{
-                allowsInlineMediaPlayback: true,
-                mediaPlaybackRequiresUserAction: true,
+            <WebView
+              source={{
+                html: `
+                  <!DOCTYPE html>
+                  <html>
+                    <head>
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                      <style>
+                        body, html { margin: 0; padding: 0; background: #000; width: 100%; height: 100%; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+                        video { width: 100%; height: 100%; object-fit: contain; }
+                      </style>
+                    </head>
+                    <body>
+                      <video id="video-player" controls playsinline>
+                        <source src="${post.videoUrl}" type="video/mp4">
+                      </video>
+                    </body>
+                  </html>
+                `
               }}
-              initialPlayerParams={{
-                modestbranding: true,
-                rel: false,
-                preventFullScreen: false,
-              }}
+              style={{ flex: 1, backgroundColor: '#000' }}
+              allowsInlineMediaPlayback={true}
+              mediaPlaybackRequiresUserAction={true}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
             />
           </View>
         );
@@ -256,12 +305,29 @@ function LivePostCard({
 
       {/* Footer: kudos + index */}
       <View style={styles.cardFooter}>
-        <KudosButton
-          kudoed={post.kudoed}
-          kudosCount={post.kudosCount}
-          onPress={handleKudos}
-          busy={kudosBusy}
-        />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <KudosButton
+            kudoed={post.kudoed}
+            kudosCount={post.kudosCount}
+            onPress={handleKudos}
+            busy={kudosBusy}
+          />
+          <TouchableOpacity
+            onPress={() => router.push(`/post/${post.id}`)}
+            style={styles.commentBtn}
+            activeOpacity={0.75}
+          >
+            <Ionicons
+              name="chatbubble-outline"
+              size={16}
+              color={C.slate}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.commentLabel}>
+              {post.commentsCount ?? 0}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.footerRight}>
           {/* <View style={styles.footerLine} /> */}
           {/* <Text style={styles.postIndex}>{postNum}</Text> */}
@@ -346,12 +412,6 @@ export default function FeedScreen() {
         >
           {/* Editorial masthead */}
           <View style={styles.masthead}>
-            <View style={styles.mastheadLabel}>
-              <View style={styles.mastheadLine} />
-              <Text style={styles.mastheadMeta}>
-                Today's issue · {new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
-              </Text>
-            </View>
             <Text style={styles.mastheadTitle}>
               {'Hi ' + myName + '!'}
             </Text>
@@ -360,10 +420,9 @@ export default function FeedScreen() {
           {/* Section header */}
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderInner}>
-              <View style={styles.sectionDot} />
-              <Text style={styles.sectionLabel}>Latest from the community</Text>
+              {/* <View style={styles.sectionDot} /> */}
             </View>
-            {data && <Text style={styles.sectionCount}>{data.total} posts</Text>}
+            {/* {data && <Text style={styles.sectionCount}>{data.total} posts</Text>} */}
           </View>
 
           {/* Loading */}
@@ -414,6 +473,8 @@ export default function FeedScreen() {
 }
 
 /* ── Styles ───────────────────────────────────────────────────────────────── */
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 const shadow = Platform.select({
   ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10 },
   android: { elevation: 3 },
@@ -439,7 +500,7 @@ const styles = StyleSheet.create({
   mastheadLabel: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   mastheadLine: { width: 16, height: 1.5, backgroundColor: C.red, marginRight: 8 },
   mastheadMeta: { fontFamily: Fonts.mono, fontSize: 10, color: C.red, letterSpacing: 1.8, textTransform: 'uppercase' },
-  mastheadTitle: { fontFamily: Fonts.serif, fontSize: 34, lineHeight: 38, letterSpacing: -0.8, color: C.ink },
+  mastheadTitle: { fontFamily: Fonts.serif, fontSize: 24, lineHeight: 38, letterSpacing: -0.8, color: C.ink },
 
   /* Section header */
   sectionHeader: {
@@ -521,4 +582,125 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 28, color: C.red, marginBottom: 12 },
   emptyTitle: { fontFamily: Fonts.serif, fontSize: 20, color: C.ink, marginBottom: 8, letterSpacing: -0.3 },
   emptyBody: { fontSize: 13, color: C.muted, textAlign: 'center', lineHeight: 20 },
+
+  /* Modal Styles */
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 22,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalScrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+
+  /* Comment button */
+  commentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.hair,
+    backgroundColor: C.paper,
+  },
+  commentLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: C.slate,
+  },
+
+  /* Inline Comments Styles */
+  inlineCommentsContainer: {
+    borderTopWidth: 1,
+    borderTopColor: C.hair,
+    paddingTop: 10,
+    backgroundColor: C.paper,
+  },
+  noCommentsTextInline: {
+    textAlign: 'center',
+    color: C.faint,
+    fontSize: 12,
+    marginVertical: 10,
+  },
+  inlineCommentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  inlineCommentContent: {
+    flex: 1,
+    backgroundColor: C.mist,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  inlineCommentAuthorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  inlineCommentAuthor: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.ink,
+  },
+  inlineCommentTime: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: C.faint,
+  },
+  inlineCommentBody: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: C.ink,
+  },
+  inlineCommentInputRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: C.hair,
+    alignItems: 'center',
+    gap: 8,
+  },
+  inlineCommentInput: {
+    flex: 1,
+    backgroundColor: C.mist,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    maxHeight: 80,
+    fontSize: 13,
+    color: C.ink,
+  },
+  inlineCommentSendBtn: {
+    backgroundColor: C.red,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

@@ -8,17 +8,25 @@ import {
   ActivityIndicator,
   Share,
   Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { C, Fonts } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '@/components/tedx/avatar';
 import { useApi } from '@/lib/hooks/use-api';
 import { UsersApi } from '@/lib/api/users';
 
-function inferRole(headline?: string): 'Speaker' | 'Organizer' | 'Attendee' {
+function inferRole(headline?: string, explicitRole?: string): 'Speaker' | 'Organizer' | 'Attendee' {
+  if (explicitRole) {
+    const r = explicitRole.toLowerCase();
+    if (r === 'speaker') return 'Speaker';
+    if (r === 'organizer' || r === 'admin' || r === 'super_admin' || r === 'curator') return 'Organizer';
+    if (r === 'user' || r === 'attendee' || r === 'member') return 'Attendee';
+  }
   const h = (headline || '').toLowerCase();
-  if (h.includes('speaker') || h.includes('tedx')) return 'Speaker';
+  if (h.includes('speaker')) return 'Speaker';
   if (h.includes('organizer') || h.includes('curator') || h.includes('host')) return 'Organizer';
   return 'Attendee';
 }
@@ -52,7 +60,7 @@ export default function MemberDetailScreen() {
   const joinedYear = member?.createdAt ? new Date(member.createdAt).getFullYear() : null;
   const postsCount = member?.postsCount ?? 0;
   
-  const role = inferRole(displayHeadline || '');
+  const role = inferRole(displayHeadline || '', member?.role);
   const colors = roleColors[role] || roleColors.Attendee;
 
   const handleShare = async () => {
@@ -96,11 +104,25 @@ export default function MemberDetailScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }} edges={['bottom']}>
       <Stack.Screen
         options={{
-          headerBackTitle: 'Directory',
           title: 'User Profile',
           headerShadowVisible: false,
           headerStyle: { backgroundColor: C.paper },
           headerTintColor: C.ink,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginLeft: Platform.OS === 'ios' ? -8 : 0,
+                paddingVertical: 8,
+                paddingHorizontal: 4,
+              }}
+            >
+              <Ionicons name="chevron-back" size={24} color={C.ink} />
+              <Text style={{ fontSize: 17, color: C.ink, marginLeft: 2 }}>Directory</Text>
+            </TouchableOpacity>
+          ),
         }}
       />
 

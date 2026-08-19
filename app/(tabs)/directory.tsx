@@ -26,9 +26,15 @@ const FILTER_CHIPS = ['All', 'Speakers', 'Attendees', 'Tech', 'Design', 'Climate
  * Derive a UI "role" from the headline since the backend's User schema doesn't include one.
  * Keeps the editorial role-badge look from the design.
  */
-function inferRole(headline?: string): 'Speaker' | 'Organizer' | 'Attendee' {
+function inferRole(headline?: string, explicitRole?: string): 'Speaker' | 'Organizer' | 'Attendee' {
+  if (explicitRole) {
+    const r = explicitRole.toLowerCase();
+    if (r === 'speaker') return 'Speaker';
+    if (r === 'organizer' || r === 'admin' || r === 'super_admin' || r === 'curator') return 'Organizer';
+    if (r === 'user' || r === 'attendee' || r === 'member') return 'Attendee';
+  }
   const h = (headline || '').toLowerCase();
-  if (h.includes('speaker') || h.includes('tedx')) return 'Speaker';
+  if (h.includes('speaker')) return 'Speaker';
   if (h.includes('organizer') || h.includes('curator') || h.includes('host')) return 'Organizer';
   return 'Attendee';
 }
@@ -41,7 +47,7 @@ const roleColor: Record<string, string> = {
 
 function MemberCard({ member, featured }: { member: User; featured?: boolean }) {
   const router = useRouter();
-  const role = inferRole(member.headline);
+  const role = inferRole(member.headline, member.role);
   const rc = roleColor[role] ?? C.slate;
   return (
     <View style={[styles.memberCard, featured && styles.featuredBorder]}>
@@ -104,7 +110,7 @@ export default function DirectoryScreen() {
     // Filter out currently logged-in user
     if (currentUser && m.id === currentUser.id) return false;
 
-    const role = inferRole(m.headline);
+    const role = inferRole(m.headline, m.role);
     let matchFilter: boolean;
     if (activeFilter === 'All') matchFilter = true;
     else if (activeFilter === 'Speakers') matchFilter = role === 'Speaker';
@@ -126,9 +132,6 @@ export default function DirectoryScreen() {
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <View>
-              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, letterSpacing: 1.5, textTransform: 'uppercase' }}>
-                04 / community
-              </Text>
               <Text style={{ fontFamily: Fonts.serif, fontSize: 28, fontWeight: '400', letterSpacing: -0.6, marginTop: 2, color: C.ink }}>
                 Directory
               </Text>

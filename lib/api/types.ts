@@ -62,6 +62,7 @@ export interface Post {
   author: User;
   kudosCount: number;
   kudoed: boolean;
+  commentsCount?: number;
   createdAt: string;
 }
 

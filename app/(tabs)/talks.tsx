@@ -171,7 +171,6 @@ export default function TalksScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={{ marginBottom: 14 }}>
-            <Text style={styles.headerEyebrow}>02 / talks</Text>
             <Text style={styles.headerTitle}>Talks worth{'\n'}rewatching</Text>
           </View>
 

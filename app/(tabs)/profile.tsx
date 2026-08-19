@@ -404,18 +404,6 @@ export default function ProfileScreen() {
                   editable={!saving}
                 />
 
-                {/* <FieldLabel>Avatar URL</FieldLabel>
-                <TextInput
-                  style={styles.field}
-                  value={editAvatarUrl}
-                  onChangeText={setEditAvatarUrl}
-                  placeholder="https://…"
-                  placeholderTextColor={C.faint}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                  editable={!saving}
-                /> */}
               </View>
 
               {/* ── About ── */}
@@ -427,12 +415,40 @@ export default function ProfileScreen() {
                   style={styles.field}
                   value={editHeadline}
                   onChangeText={setEditHeadline}
-                  placeholder="One-liner about what you do"
+                  placeholder="One-liner about what you do (e.g., Speaker | AI Researcher)"
                   placeholderTextColor={C.faint}
                   maxLength={160}
                   editable={!saving}
                 />
-                <Text style={styles.charCount}>{editHeadline.length} / 160</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 11, color: C.slate }}>Add role tag:</Text>
+                    {['Speaker', 'Organizer'].map((tag) => {
+                      const hasTag = editHeadline.toLowerCase().includes(tag.toLowerCase());
+                      return (
+                        <TouchableOpacity
+                          key={tag}
+                          disabled={saving || hasTag}
+                          onPress={() => {
+                            if (!hasTag) {
+                              const trimmed = editHeadline.trim();
+                              setEditHeadline(trimmed ? `${trimmed} · ${tag}` : tag);
+                            }
+                          }}
+                          style={[
+                            styles.tagChip,
+                            hasTag && styles.tagChipActive
+                          ]}
+                        >
+                          <Text style={[styles.tagChipText, hasTag && styles.tagChipTextActive]}>
+                            {hasTag ? `✓ ${tag}` : `+ ${tag}`}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <Text style={styles.charCount}>{editHeadline.length} / 160</Text>
+                </View>
 
                 <FieldLabel>Bio</FieldLabel>
                 <TextInput
@@ -709,5 +725,26 @@ const styles = StyleSheet.create({
     color: C.faint,
     textAlign: 'right',
     marginTop: 4,
+  },
+  tagChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: C.mist,
+    borderWidth: 1,
+    borderColor: C.hair,
+  },
+  tagChipActive: {
+    backgroundColor: `${C.red}15`,
+    borderColor: C.red,
+  },
+  tagChipText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: C.slate,
+  },
+  tagChipTextActive: {
+    color: C.red,
+    fontWeight: '600',
   },
 });
