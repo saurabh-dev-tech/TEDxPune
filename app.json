@@ -2,7 +2,7 @@
   "expo": {
     "name": "TEDxPune Tribe",
     "slug": "TEDxPune",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "tedxpune",
@@ -35,7 +35,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.tedxpune.community",
-      "versionCode": 10,
+      "versionCode": 11,
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.RECORD_AUDIO"
@@ -78,9 +78,7 @@
         "projectId": "45f5ac71-1402-47f9-b7dd-141e6a1c5a83"
       }
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.9",
     "updates": {
       "url": "https://u.expo.dev/45f5ac71-1402-47f9-b7dd-141e6a1c5a83",
       "fallbackToCacheTimeout": 0

@@ -1,8 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 
-const DEFAULT_CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'tedxpune';
-const DEFAULT_UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'tedxpune_profiles';
+const DEFAULT_CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dirarq6it';
+const DEFAULT_UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default';
 
 export interface PickAndUploadResult {
   url?: string;
