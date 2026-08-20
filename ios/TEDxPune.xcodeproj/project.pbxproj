@@ -352,6 +352,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = TEDxPune/TEDxPune.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L7XM4G9FT4;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -372,7 +373,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.TEDxPune;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tedxpune.community;
 				PRODUCT_NAME = TEDxPune;
 				SWIFT_OBJC_BRIDGING_HEADER = "TEDxPune/TEDxPune-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -390,6 +391,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = TEDxPune/TEDxPune.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L7XM4G9FT4;
 				INFOPLIST_FILE = TEDxPune/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "TEDxPune Tribe";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
@@ -405,7 +407,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.TEDxPune;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tedxpune.community;
 				PRODUCT_NAME = TEDxPune;
 				SWIFT_OBJC_BRIDGING_HEADER = "TEDxPune/TEDxPune-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
