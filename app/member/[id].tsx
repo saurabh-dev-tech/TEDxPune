@@ -18,6 +18,8 @@ import { Avatar } from '@/components/tedx/avatar';
 import { useApi } from '@/lib/hooks/use-api';
 import { UsersApi } from '@/lib/api/users';
 
+import { useTheme } from '@/lib/theme/context';
+
 function inferRole(headline?: string, explicitRole?: string): 'Speaker' | 'Organizer' | 'Attendee' {
   if (explicitRole) {
     const r = explicitRole.toLowerCase();
@@ -31,15 +33,10 @@ function inferRole(headline?: string, explicitRole?: string): 'Speaker' | 'Organ
   return 'Attendee';
 }
 
-const roleColors: Record<string, { bg: string; text: string; border: string }> = {
-  Speaker: { bg: C.redSoft, text: C.red, border: `${C.red}30` },
-  Organizer: { bg: C.ink, text: C.paper, border: C.ink },
-  Attendee: { bg: C.mist, text: C.slate, border: C.hair },
-};
-
 export default function MemberDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors, isDark } = useTheme();
 
   const { data: member, loading, error, refetch } = useApi(
     () => UsersApi.byId(id),
@@ -61,7 +58,6 @@ export default function MemberDetailScreen() {
   const postsCount = member?.postsCount ?? 0;
   
   const role = inferRole(displayHeadline || '', member?.role);
-  const colors = roleColors[role] || roleColors.Attendee;
 
   const handleShare = async () => {
     if (!member) return;
@@ -101,13 +97,13 @@ export default function MemberDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <Stack.Screen
         options={{
           title: 'User Profile',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: C.paper },
-          headerTintColor: C.ink,
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -119,8 +115,8 @@ export default function MemberDetailScreen() {
                 paddingHorizontal: 4,
               }}
             >
-              <Ionicons name="chevron-back" size={24} color={C.ink} />
-              <Text style={{ fontSize: 17, color: C.ink, marginLeft: 2 }}>Directory</Text>
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
+              <Text style={{ fontSize: 17, color: colors.text, marginLeft: 2 }}>Directory</Text>
             </TouchableOpacity>
           ),
         }}
@@ -150,14 +146,14 @@ export default function MemberDetailScreen() {
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
           
           {/* Asymmetric Profile Intro Card */}
-          <View style={styles.introCard}>
+          <View style={[styles.introCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.introLeft}>
-              <View style={[styles.badge, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <Text style={[styles.badgeText, { color: colors.text }]}>{role}</Text>
+              <View style={[styles.badge, { backgroundColor: isDark ? colors.card : C.mist, borderColor: colors.border }]}>
+                <Text style={[styles.badgeText, { color: colors.subtext }]}>{role}</Text>
               </View>
-              <Text style={styles.memberName}>{displayName}</Text>
+              <Text style={[styles.memberName, { color: colors.text }]}>{displayName}</Text>
               {joinedYear && (
-                <Text style={styles.memberSince}>Member since {joinedYear}</Text>
+                <Text style={[styles.memberSince, { color: colors.subtext }]}>Member since {joinedYear}</Text>
               )}
             </View>
             <View style={styles.introRight}>
@@ -167,9 +163,9 @@ export default function MemberDetailScreen() {
 
           {/* Large Quote/Headline Block */}
           {displayHeadline ? (
-            <View style={styles.headlineContainer}>
+            <View style={[styles.headlineContainer, { backgroundColor: colors.card, borderLeftColor: C.red }]}>
               <Text style={styles.quoteMark}>“</Text>
-              <Text style={styles.headlineText}>{displayHeadline}</Text>
+              <Text style={[styles.headlineText, { color: colors.subtext }]}>{displayHeadline}</Text>
             </View>
           ) : null}
 
@@ -178,7 +174,7 @@ export default function MemberDetailScreen() {
             <View style={styles.socialButtonsRow}>
               {displayLinkedin && (
                 <TouchableOpacity
-                  style={[styles.socialPill, { borderColor: '#0077B5' }]}
+                  style={[styles.socialPill, { borderColor: '#0077B5', backgroundColor: colors.surface }]}
                   onPress={() => handleSocialPress('linkedin', displayLinkedin)}
                   activeOpacity={0.7}
                 >
@@ -187,7 +183,7 @@ export default function MemberDetailScreen() {
               )}
               {displayWhatsapp && (
                 <TouchableOpacity
-                  style={[styles.socialPill, { borderColor: '#25D366' }]}
+                  style={[styles.socialPill, { borderColor: '#25D366', backgroundColor: colors.surface }]}
                   onPress={() => handleSocialPress('whatsapp', displayWhatsapp)}
                   activeOpacity={0.7}
                 >
@@ -196,7 +192,7 @@ export default function MemberDetailScreen() {
               )}
               {displayInstagram && (
                 <TouchableOpacity
-                  style={[styles.socialPill, { borderColor: '#E1306C' }]}
+                  style={[styles.socialPill, { borderColor: '#E1306C', backgroundColor: colors.surface }]}
                   onPress={() => handleSocialPress('instagram', displayInstagram)}
                   activeOpacity={0.7}
                 >
@@ -205,11 +201,11 @@ export default function MemberDetailScreen() {
               )}
               {displayX && (
                 <TouchableOpacity
-                  style={[styles.socialPill, { borderColor: C.ink }]}
+                  style={[styles.socialPill, { borderColor: colors.border, backgroundColor: colors.surface }]}
                   onPress={() => handleSocialPress('x', displayX)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.socialPillText, { color: C.ink }]}>𝕏 (Twitter) 𝕏</Text>
+                  <Text style={[styles.socialPillText, { color: colors.text }]}>𝕏 (Twitter) 𝕏</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -217,17 +213,17 @@ export default function MemberDetailScreen() {
 
           {/* Stats Bar - As elegant pills */}
           <View style={styles.quickStatsRow}>
-            <View style={styles.statPill}>
-              <Text style={styles.statPillValue}>{postsCount}</Text>
-              <Text style={styles.statPillLabel}>POSTS</Text>
+            <View style={[styles.statPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.statPillValue, { color: colors.text }]}>{postsCount}</Text>
+              <Text style={[styles.statPillLabel, { color: colors.subtext }]}>POSTS</Text>
             </View>
-            <View style={styles.statPill}>
-              <Text style={styles.statPillValue}>—</Text>
-              <Text style={styles.statPillLabel}>TALKS</Text>
+            <View style={[styles.statPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.statPillValue, { color: colors.text }]}>—</Text>
+              <Text style={[styles.statPillLabel, { color: colors.subtext }]}>TALKS</Text>
             </View>
-            <View style={styles.statPill}>
-              <Text style={styles.statPillValue}>—</Text>
-              <Text style={styles.statPillLabel}>CONNECTS</Text>
+            <View style={[styles.statPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.statPillValue, { color: colors.text }]}>—</Text>
+              <Text style={[styles.statPillLabel, { color: colors.subtext }]}>CONNECTS</Text>
             </View>
           </View>
 
@@ -235,11 +231,11 @@ export default function MemberDetailScreen() {
           {displayBio ? (
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeaderLine}>
-                <Text style={styles.sectionTitle}>BIOGRAPHY</Text>
-                <View style={styles.accentLine} />
+                <Text style={[styles.sectionTitle, { color: colors.subtext }]}>BIOGRAPHY</Text>
+                <View style={[styles.accentLine, { backgroundColor: colors.border }]} />
               </View>
-              <View style={styles.bioCard}>
-                <Text style={styles.bioText}>{displayBio}</Text>
+              <View style={[styles.bioCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.bioText, { color: colors.text }]}>{displayBio}</Text>
               </View>
             </View>
           ) : null}
@@ -248,28 +244,28 @@ export default function MemberDetailScreen() {
           {(displayEmail || displayLocation || displayWebsite) ? (
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeaderLine}>
-                <Text style={styles.sectionTitle}>DIRECTORY INFO</Text>
-                <View style={styles.accentLine} />
+                <Text style={[styles.sectionTitle, { color: colors.subtext }]}>DIRECTORY INFO</Text>
+                <View style={[styles.accentLine, { backgroundColor: colors.border }]} />
               </View>
               
-              <View style={styles.detailsGrid}>
+              <View style={[styles.detailsGrid, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 {displayLocation && (
-                  <View style={styles.detailsGridItem}>
-                    <Text style={styles.gridItemLabel}>LOCATION</Text>
-                    <Text style={styles.gridItemValue}>📍 {displayLocation}</Text>
+                  <View style={[styles.detailsGridItem, { borderBottomColor: colors.border }]}>
+                    <Text style={[styles.gridItemLabel, { color: colors.subtext }]}>LOCATION</Text>
+                    <Text style={[styles.gridItemValue, { color: colors.text }]}>📍 {displayLocation}</Text>
                   </View>
                 )}
 
                 {displayEmail && (
-                  <View style={styles.detailsGridItem}>
-                    <Text style={styles.gridItemLabel}>EMAIL</Text>
-                    <Text style={styles.gridItemValue} numberOfLines={1}>✉️ {displayEmail}</Text>
+                  <View style={[styles.detailsGridItem, { borderBottomColor: colors.border }]}>
+                    <Text style={[styles.gridItemLabel, { color: colors.subtext }]}>EMAIL</Text>
+                    <Text style={[styles.gridItemValue, { color: colors.text }]} numberOfLines={1}>✉️ {displayEmail}</Text>
                   </View>
                 )}
 
                 {displayWebsite && (
-                  <View style={styles.detailsGridItem}>
-                    <Text style={styles.gridItemLabel}>WEBSITE</Text>
+                  <View style={[styles.detailsGridItem, { borderBottomColor: colors.border }]}>
+                    <Text style={[styles.gridItemLabel, { color: colors.subtext }]}>WEBSITE</Text>
                     <Text style={[styles.gridItemValue, { color: C.red }]} numberOfLines={1}>🔗 {displayWebsite.replace(/^https?:\/\/(www\.)?/, '')}</Text>
                   </View>
                 )}
@@ -278,7 +274,7 @@ export default function MemberDetailScreen() {
           ) : null}
 
           {/* Action Button */}
-          <TouchableOpacity style={styles.primaryActionBtn} onPress={handleShare} activeOpacity={0.8}>
+          <TouchableOpacity style={[styles.primaryActionBtn, { backgroundColor: isDark ? C.red : C.ink }]} onPress={handleShare} activeOpacity={0.8}>
             <Text style={styles.primaryActionBtnText}>Share Profile</Text>
           </TouchableOpacity>
 

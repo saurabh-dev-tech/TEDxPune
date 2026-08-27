@@ -20,12 +20,10 @@ import type { User } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/context';
 import { MaxWidthContainer } from '@/components/tedx/max-width-container';
 
+import { useTheme } from '@/lib/theme/context';
+
 const FILTER_CHIPS = ['All', 'Speakers', 'Attendees', 'Tech', 'Design', 'Climate'];
 
-/**
- * Derive a UI "role" from the headline since the backend's User schema doesn't include one.
- * Keeps the editorial role-badge look from the design.
- */
 function inferRole(headline?: string, explicitRole?: string): 'Speaker' | 'Organizer' | 'Attendee' {
   if (explicitRole) {
     const r = explicitRole.toLowerCase();
@@ -39,49 +37,45 @@ function inferRole(headline?: string, explicitRole?: string): 'Speaker' | 'Organ
   return 'Attendee';
 }
 
-const roleColor: Record<string, string> = {
-  Speaker: C.red,
-  Organizer: C.ink,
-  Attendee: C.slate,
-};
-
 function MemberCard({ member, featured }: { member: User; featured?: boolean }) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const role = inferRole(member.headline, member.role);
-  const rc = roleColor[role] ?? C.slate;
+  const rc = role === 'Speaker' ? C.red : (isDark ? C.darkInk : C.ink);
   return (
-    <View style={[styles.memberCard, featured && styles.featuredBorder]}>
+    <View style={[styles.memberCard, { backgroundColor: colors.card, borderColor: colors.border }, featured && styles.featuredBorder]}>
       {featured && <View style={styles.featuredLine} />}
       <Avatar name={member.fullName} size={48} url={member.avatarUrl} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-          <Text style={{ fontWeight: '600', fontSize: 14.5, color: C.ink, flexShrink: 1 }} numberOfLines={1}>
+          <Text style={{ fontWeight: '600', fontSize: 14.5, color: colors.text, flexShrink: 1 }} numberOfLines={1}>
             {member.fullName}
           </Text>
-          <View style={[styles.roleBadge, { borderColor: rc === C.slate ? C.hair : rc }]}>
-            <Text style={{ fontFamily: Fonts.mono, fontSize: 9, color: rc, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+          <View style={[styles.roleBadge, { borderColor: role === 'Speaker' ? C.red : colors.border }]}>
+            <Text style={{ fontFamily: Fonts.mono, fontSize: 9, color: role === 'Speaker' ? C.red : colors.subtext, letterSpacing: 0.8, textTransform: 'uppercase' }}>
               {role}
             </Text>
           </View>
         </View>
         {!!member.headline && (
-          <Text style={{ fontSize: 13, color: C.slate, lineHeight: 18, marginBottom: 4 }} numberOfLines={2}>
+          <Text style={{ fontSize: 13, color: colors.subtext, lineHeight: 18, marginBottom: 4 }} numberOfLines={2}>
             {member.headline}
           </Text>
         )}
       </View>
       <TouchableOpacity
-        style={styles.viewBtn}
+        style={[styles.viewBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
         activeOpacity={0.7}
         onPress={() => router.push(`/member/${member.id}`)}
       >
-        <Text style={{ fontSize: 12, fontWeight: '600', color: C.ink }}>View</Text>
+        <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>View</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 export default function DirectoryScreen() {
+  const { colors, isDark } = useTheme();
   const [activeFilter, setActiveFilter] = useState('All');
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -97,8 +91,6 @@ export default function DirectoryScreen() {
     try {
       await refetch();
     } catch {
-      // useApi tracks the error via `error` state; swallow here to avoid
-      // an unhandled-promise warning from RefreshControl.
     } finally {
       setRefreshing(false);
     }
@@ -107,7 +99,6 @@ export default function DirectoryScreen() {
   const members = data?.data ?? [];
 
   const filtered = members.filter(m => {
-    // Filter out currently logged-in user
     if (currentUser && m.id === currentUser.id) return false;
 
     const role = inferRole(m.headline, m.role);
@@ -127,28 +118,28 @@ export default function DirectoryScreen() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }}>
-      <MaxWidthContainer style={{ backgroundColor: C.paper }}>
-        <View style={styles.header}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <MaxWidthContainer style={{ backgroundColor: colors.background }}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <View>
-              <Text style={{ fontFamily: Fonts.serif, fontSize: 28, fontWeight: '400', letterSpacing: -0.6, marginTop: 2, color: C.ink }}>
+              <Text style={{ fontFamily: Fonts.serif, fontSize: 28, fontWeight: '400', letterSpacing: -0.6, marginTop: 2, color: colors.text }}>
                 Directory
               </Text>
             </View>
-            <View style={styles.memberCountBadge}>
-              <Text style={{ fontFamily: Fonts.mono, fontSize: 11, color: C.slate }}>
+            <View style={[styles.memberCountBadge, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+              <Text style={{ fontFamily: Fonts.mono, fontSize: 11, color: colors.subtext }}>
                 {data ? `${data.total} members` : '… members'}
               </Text>
             </View>
           </View>
 
-          <View style={styles.searchBar}>
-            <Text style={{ fontSize: 16, color: C.muted, marginRight: 8 }}>🔍</Text>
+          <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={{ fontSize: 16, color: colors.subtext, marginRight: 8 }}>🔍</Text>
             <TextInput
-              style={{ flex: 1, fontSize: 14, color: C.ink }}
+              style={{ flex: 1, fontSize: 14, color: colors.text }}
               placeholder="Search by name or headline…"
-              placeholderTextColor={C.muted}
+              placeholderTextColor={colors.subtext}
               value={query}
               onChangeText={setQuery}
               autoCorrect={false}
@@ -156,7 +147,7 @@ export default function DirectoryScreen() {
             />
             {query.length > 0 && (
               <TouchableOpacity onPress={() => setQuery('')}>
-                <Text style={{ fontSize: 14, color: C.slate, fontWeight: '500' }}>Clear</Text>
+                <Text style={{ fontSize: 14, color: colors.subtext, fontWeight: '500' }}>Clear</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -170,9 +161,20 @@ export default function DirectoryScreen() {
                   <TouchableOpacity
                     key={chip}
                     onPress={() => setActiveFilter(chip)}
-                    style={[styles.filterChip, active && styles.filterChipActive]}
+                    style={[
+                      styles.filterChip,
+                      {
+                        backgroundColor: active ? C.red : colors.surface,
+                        borderColor: active ? C.red : colors.border,
+                      },
+                    ]}
                   >
-                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        { color: active ? '#ffffff' : colors.text },
+                      ]}
+                    >
                       {chip}
                     </Text>
                   </TouchableOpacity>
@@ -191,7 +193,7 @@ export default function DirectoryScreen() {
           {loading && members.length === 0 && (
             <View style={{ paddingVertical: 60, alignItems: 'center' }}>
               <ActivityIndicator color={C.red} size="large" />
-              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, marginTop: 12, letterSpacing: 1 }}>LOADING…</Text>
+              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: colors.subtext, marginTop: 12, letterSpacing: 1 }}>LOADING…</Text>
             </View>
           )}
 
@@ -210,8 +212,8 @@ export default function DirectoryScreen() {
           {!loading && !error && filtered.length === 0 && (
             <View style={styles.emptyState}>
               <Text style={{ fontSize: 32, marginBottom: 12 }}>👥</Text>
-              <Text style={{ fontFamily: Fonts.serif, fontSize: 18, color: C.ink, marginBottom: 6 }}>No members found</Text>
-              <Text style={{ fontSize: 13, color: C.muted, textAlign: 'center', paddingHorizontal: 24 }}>
+              <Text style={{ fontFamily: Fonts.serif, fontSize: 18, color: colors.text, marginBottom: 6 }}>No members found</Text>
+              <Text style={{ fontSize: 13, color: colors.subtext, textAlign: 'center', paddingHorizontal: 24 }}>
                 We couldn't find anyone matching your search or filters. Try adjusting them.
               </Text>
             </View>

@@ -47,10 +47,13 @@ function getNotificationIcon(type: AppNotification['type']) {
   }
 }
 
+import { useTheme } from '@/lib/theme/context';
+
 type FilterType = 'all' | 'unread' | 'announcement';
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -100,20 +103,20 @@ export default function NotificationsScreen() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }}>
-      <MaxWidthContainer style={{ backgroundColor: C.paper }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <MaxWidthContainer style={{ backgroundColor: colors.background }}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backBtn}
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="arrow-back" size={24} color={C.ink} />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.headerTitle}>Notifications</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
             {unreadCount > 0 && (
               <Text style={styles.headerSub}>{unreadCount} unread</Text>
             )}
@@ -126,7 +129,7 @@ export default function NotificationsScreen() {
         </View>
 
         {/* Filter Pills */}
-        <View style={styles.filterRow}>
+        <View style={[styles.filterRow, { borderBottomColor: colors.border }]}>
           {(['all', 'unread', 'announcement'] as FilterType[]).map(filter => {
             const label =
               filter === 'all'
@@ -139,10 +142,16 @@ export default function NotificationsScreen() {
               <TouchableOpacity
                 key={filter}
                 onPress={() => setActiveFilter(filter)}
-                style={[styles.filterChip, isActive && styles.filterChipActive]}
+                style={[
+                  styles.filterChip,
+                  {
+                    backgroundColor: isActive ? C.red : colors.surface,
+                    borderColor: isActive ? C.red : colors.border,
+                  },
+                ]}
                 activeOpacity={0.75}
               >
-                <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
+                <Text style={[styles.filterText, { color: isActive ? '#ffffff' : colors.text }]}>
                   {label}
                 </Text>
               </TouchableOpacity>
@@ -169,9 +178,9 @@ export default function NotificationsScreen() {
           >
             {filteredNotifications.length === 0 ? (
               <View style={styles.emptyBox}>
-                <Ionicons name="notifications-off-outline" size={48} color={C.faint} />
-                <Text style={styles.emptyTitle}>No notifications</Text>
-                <Text style={styles.emptyBody}>
+                <Ionicons name="notifications-off-outline" size={48} color={colors.subtext} />
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>No notifications</Text>
+                <Text style={[styles.emptyBody, { color: colors.subtext }]}>
                   {activeFilter === 'unread'
                     ? "You're all caught up! No unread notifications."
                     : 'When you get notifications, they will show up here.'}
@@ -184,27 +193,27 @@ export default function NotificationsScreen() {
                   <TouchableOpacity
                     key={item.id}
                     onPress={() => handleMarkAsRead(item.id)}
+                    style={[
+                      styles.itemCard,
+                      {
+                        backgroundColor: item.read ? colors.card : (isDark ? C.darkRedSoft : '#FEF2F3'),
+                        borderBottomColor: colors.border,
+                      },
+                    ]}
                     activeOpacity={0.8}
-                    style={[styles.itemCard, !item.read && styles.itemCardUnread]}
                   >
-                    {/* Icon or Avatar */}
-                    {item.authorName ? (
-                      <Avatar name={item.authorName} size={42} />
-                    ) : (
-                      <View style={[styles.iconBadge, { backgroundColor: iconInfo.bg }]}>
-                        <Ionicons name={iconInfo.icon} size={20} color={iconInfo.color} />
-                      </View>
-                    )}
+                    <View style={[styles.iconBadge, { backgroundColor: isDark ? colors.surface : iconInfo.bg }]}>
+                      <Ionicons name={iconInfo.icon} size={20} color={iconInfo.color} />
+                    </View>
 
-                    {/* Content */}
                     <View style={{ flex: 1 }}>
                       <View style={styles.itemMetaRow}>
-                        <Text style={[styles.itemTitle, !item.read && styles.itemTitleUnread]}>
+                        <Text style={[styles.itemTitle, { color: colors.text }, !item.read && styles.itemTitleUnread]}>
                           {item.title}
                         </Text>
-                        <Text style={styles.itemTime}>{timeAgo(item.createdAt)}</Text>
+                        <Text style={[styles.itemTime, { color: colors.subtext }]}>{timeAgo(item.createdAt)}</Text>
                       </View>
-                      <Text style={styles.itemBody}>{item.body}</Text>
+                      <Text style={[styles.itemBody, { color: colors.subtext }]}>{item.body}</Text>
                     </View>
 
                     {/* Unread Red Dot */}

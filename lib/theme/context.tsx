@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useColorScheme as useNativeColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors } from '@/constants/theme';
+import { setStatusBarStyle } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
+import { C, Colors } from '@/constants/theme';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -55,6 +57,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const isDark = effectiveTheme === 'dark';
   const colors = Colors[effectiveTheme];
+
+  // Sync native status bar style and system UI background color immediately
+  useEffect(() => {
+    setStatusBarStyle(isDark ? 'light' : 'dark', true);
+    SystemUI.setBackgroundColorAsync(isDark ? C.darkPaper : C.paper).catch(() => {});
+  }, [isDark]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({

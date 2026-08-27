@@ -22,14 +22,17 @@ import { nameFromClaims, pictureFromClaims } from '@/lib/auth/jwt';
 import { MaxWidthContainer } from '@/components/tedx/max-width-container';
 import { pickProfileImage, uploadImageToCloudinary } from '@/lib/cloudinary';
 
+import { useTheme } from '@/lib/theme/context';
+
 function SectionHeader({ children }: { children: string }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
       <View style={{ width: 12, height: 1, backgroundColor: C.red }} />
       <Text style={{
         fontFamily: Fonts.mono,
         fontSize: 10,
-        color: C.slate,
+        color: colors.subtext,
         letterSpacing: 1.4,
         textTransform: 'uppercase',
         fontWeight: '600',
@@ -41,16 +44,18 @@ function SectionHeader({ children }: { children: string }) {
 }
 
 function FieldLabel({ children }: { children: string }) {
+  const { colors } = useTheme();
   return (
-    <Text style={styles.fieldLabel}>{children}</Text>
+    <Text style={[styles.fieldLabel, { color: colors.subtext }]}>{children}</Text>
   );
 }
 
 function InfoRow({ icon, value }: { icon: string; value: string }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
       <Text style={{ fontSize: 14, width: 20, textAlign: 'center' }}>{icon}</Text>
-      <Text style={{ fontSize: 14, color: C.slate, flex: 1 }}>{value}</Text>
+      <Text style={{ fontSize: 14, color: colors.subtext, flex: 1 }}>{value}</Text>
     </View>
   );
 }
@@ -177,9 +182,11 @@ export default function ProfileScreen() {
   const joinedYear     = user?.createdAt  ? new Date(user.createdAt).getFullYear() : null;
   const postsCount     = user?.postsCount ?? null;
 
+  const { colors, isDark } = useTheme();
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }}>
-      <MaxWidthContainer style={{ backgroundColor: C.paper }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <MaxWidthContainer style={{ backgroundColor: colors.background }}>
         <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
           {/* Banner */}
@@ -226,7 +233,7 @@ export default function ProfileScreen() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 2,
-                    borderColor: C.paper,
+                    borderColor: colors.background,
                   }}
                 >
                   {uploadingAvatar ? (
@@ -237,17 +244,17 @@ export default function ProfileScreen() {
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.editBtn} onPress={openEdit}>
-                <Text style={{ color: C.paper, fontWeight: '600', fontSize: 13 }}>Edit profile</Text>
+                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 13 }}>Edit profile</Text>
               </TouchableOpacity>
             </View>
 
             {/* Name + headline */}
-            <Text style={styles.displayName}>{displayName}</Text>
+            <Text style={[styles.displayName, { color: colors.text }]}>{displayName}</Text>
             {displayHeadline ? (
-              <Text style={styles.displayHeadline}>{displayHeadline}</Text>
+              <Text style={[styles.displayHeadline, { color: colors.subtext }]}>{displayHeadline}</Text>
             ) : (
               <TouchableOpacity onPress={openEdit}>
-                <Text style={[styles.displayHeadline, { color: C.faint, fontStyle: 'italic' }]}>
+                <Text style={[styles.displayHeadline, { color: colors.subtext, fontStyle: 'italic' }]}>
                   Add a headline…
                 </Text>
               </TouchableOpacity>
@@ -256,36 +263,36 @@ export default function ProfileScreen() {
             {/* Meta chips */}
             <View style={styles.metaRow}>
               {displayRole && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{displayRole.toLowerCase()}</Text>
+                <View style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={[styles.chipText, { color: colors.subtext }]}>{displayRole.toLowerCase()}</Text>
                 </View>
               )}
               {joinedYear && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>since {joinedYear}</Text>
+                <View style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={[styles.chipText, { color: colors.subtext }]}>since {joinedYear}</Text>
                 </View>
               )}
-              <View style={[styles.chip, { backgroundColor: '#dcfce7' }]}>
+              <View style={[styles.chip, { backgroundColor: isDark ? 'rgba(22,163,74,0.2)' : '#dcfce7' }]}>
                 <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#16a34a', marginRight: 4 }} />
-                <Text style={[styles.chipText, { color: '#15803d' }]}>online</Text>
+                <Text style={[styles.chipText, { color: isDark ? '#4ade80' : '#15803d' }]}>online</Text>
               </View>
             </View>
 
             {/* Stats */}
-            <View style={styles.statsRow}>
+            <View style={[styles.statsRow, { borderColor: colors.border }]}>
               <View style={styles.statCell}>
-                <Text style={styles.statValue}>{postsCount ?? '—'}</Text>
-                <Text style={styles.statLabel}>posts</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>{postsCount ?? '—'}</Text>
+                <Text style={[styles.statLabel, { color: colors.subtext }]}>posts</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
               <View style={styles.statCell}>
-                <Text style={styles.statValue}>—</Text>
-                <Text style={styles.statLabel}>connections</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>—</Text>
+                <Text style={[styles.statLabel, { color: colors.subtext }]}>connections</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
               <View style={styles.statCell}>
-                <Text style={styles.statValue}>—</Text>
-                <Text style={styles.statLabel}>talks</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>—</Text>
+                <Text style={[styles.statLabel, { color: colors.subtext }]}>talks</Text>
               </View>
             </View>
 
@@ -293,10 +300,10 @@ export default function ProfileScreen() {
             <View style={{ marginBottom: 24 }}>
               <SectionHeader>About</SectionHeader>
               {displayBio ? (
-                <Text style={{ fontSize: 14, lineHeight: 22, color: C.ink }}>{displayBio}</Text>
+                <Text style={{ fontSize: 14, lineHeight: 22, color: colors.text }}>{displayBio}</Text>
               ) : (
                 <TouchableOpacity onPress={openEdit}>
-                  <Text style={{ fontSize: 14, lineHeight: 22, color: C.faint, fontStyle: 'italic' }}>
+                  <Text style={{ fontSize: 14, lineHeight: 22, color: colors.subtext, fontStyle: 'italic' }}>
                     Add a bio to tell the community what you're about…
                   </Text>
                 </TouchableOpacity>

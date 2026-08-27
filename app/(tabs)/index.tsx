@@ -17,19 +17,18 @@ import { useApi } from '@/lib/hooks/use-api';
 import { PostsApi } from '@/lib/api/posts';
 import type { Post, PollOption, Comment } from '@/lib/api/types';
 
+import { useTheme } from '@/lib/theme/context';
 import { MaxWidthContainer } from '@/components/tedx/max-width-container';
 
 /* ── Wordmark ─────────────────────────────────────────────────────────────── */
 function Wordmark() {
-  const colorScheme = useColorScheme();
-  const textColor = colorScheme === 'dark' ? '#ffffff' : '#000000';
-  const logo = colorScheme === 'dark'
+  const { isDark } = useTheme();
+  const logo = isDark
     ? require('@/assets/images/logo-white.png')
     : require('@/assets/images/logo-black.png');
 
   return (
     <View style={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
-
       <Image
         source={logo}
         style={{ width: 180, height: 60 }}
@@ -81,6 +80,7 @@ function PollBlock({
   userVoteOptionId: string | null | undefined;
   onVote: (optionId: string) => void;
 }) {
+  const { colors, isDark } = useTheme();
   const hasVoted = !!userVoteOptionId;
   const totalVotes = options.reduce((s, o) => s + o.voteCount, 0);
 
@@ -96,28 +96,32 @@ function PollBlock({
             disabled={hasVoted}
             onPress={() => onVote(opt.id)}
             activeOpacity={0.75}
-            style={[styles.pollOption, isChosen && styles.pollOptionChosen]}
+            style={[
+              styles.pollOption,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+              isChosen && { borderColor: C.red, backgroundColor: isDark ? C.darkRedSoft : C.redSoft }
+            ]}
           >
             {/* Vote bar */}
             {hasVoted && (
               <View style={[styles.pollBar, { width: `${pct}%` as any }]} />
             )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-              <Text style={[styles.pollOptionText, isChosen && { color: C.red, fontWeight: '600' }]}>
+              <Text style={[styles.pollOptionText, { color: colors.text }, isChosen && { color: C.red, fontWeight: '600' }]}>
                 {isChosen ? '✓ ' : ''}{opt.optionText}
               </Text>
               {hasVoted && (
-                <Text style={styles.pollPct}>{pct}%</Text>
+                <Text style={[styles.pollPct, { color: colors.subtext }]}>{pct}%</Text>
               )}
             </View>
           </TouchableOpacity>
         );
       })}
       {!hasVoted && (
-        <Text style={styles.pollHint}>Tap an option to vote</Text>
+        <Text style={[styles.pollHint, { color: colors.subtext }]}>Tap an option to vote</Text>
       )}
       {hasVoted && (
-        <Text style={styles.pollHint}>{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</Text>
+        <Text style={[styles.pollHint, { color: colors.subtext }]}>{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</Text>
       )}
     </View>
   );
@@ -129,20 +133,25 @@ function KudosButton({
 }: {
   kudoed: boolean; kudosCount: number; onPress: () => void; busy: boolean;
 }) {
+  const { colors, isDark } = useTheme();
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={busy}
-      style={[styles.kudosBtn, kudoed && styles.kudosBtnActive]}
+      style={[
+        styles.kudosBtn,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        kudoed && { borderColor: `${C.red}50`, backgroundColor: isDark ? C.darkRedSoft : C.redSoft }
+      ]}
       activeOpacity={0.75}
     >
       <Ionicons
         name={kudoed ? 'thumbs-up' : 'thumbs-up-outline'}
         size={16}
-        color={kudoed ? C.red : C.slate}
+        color={kudoed ? C.red : colors.subtext}
         style={{ marginRight: 6 }}
       />
-      <Text style={[styles.kudosLabel, kudoed && { color: C.red, fontWeight: '600' }]}>
+      <Text style={[styles.kudosLabel, { color: colors.subtext }, kudoed && { color: C.red, fontWeight: '600' }]}>
         {kudosCount}
       </Text>
     </TouchableOpacity>
@@ -159,6 +168,7 @@ function LivePostCard({
   onPollVoted: (id: string, optionId: string) => void;
 }) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [kudosBusy, setKudosBusy] = useState(false);
   const [pollBusy,  setPollBusy]  = useState(false);
   const postNum = String(index + 1).padStart(2, '0');
@@ -194,7 +204,7 @@ function LivePostCard({
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: isDark ? 1 : 0 }]}>
       {/* Colour accent bar */}
       <View style={[styles.cardAccent, { backgroundColor: accent }]} />
 
@@ -206,18 +216,18 @@ function LivePostCard({
         <View style={styles.cardHeader}>
           <Avatar name={post.author.fullName} size={42} url={post.author.avatarUrl} />
           <View style={styles.authorInfo}>
-            <Text style={styles.authorName}>{post.author.fullName}</Text>
+            <Text style={[styles.authorName, { color: colors.text }]}>{post.author.fullName}</Text>
             {!!post.author.headline && (
-              <Text style={styles.authorHeadline}>{post.author.headline}</Text>
+              <Text style={[styles.authorHeadline, { color: colors.subtext }]}>{post.author.headline}</Text>
             )}
           </View>
-          <View style={styles.timePill}>
-            <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
+          <View style={[styles.timePill, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.timeText, { color: colors.subtext }]}>{timeAgo(post.createdAt)}</Text>
           </View>
         </View>
 
         {/* Body */}
-        <Text style={styles.bodyText}>{post.body}</Text>
+        <Text style={[styles.bodyText, { color: colors.text }]}>{post.body}</Text>
       </TouchableOpacity>
 
       {/* ── Image ── */}
@@ -314,7 +324,7 @@ function LivePostCard({
           />
           <TouchableOpacity
             onPress={() => router.push(`/post/${post.id}`)}
-            style={styles.commentBtn}
+            style={[styles.commentBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
             activeOpacity={0.75}
           >
             <Ionicons
@@ -340,6 +350,7 @@ function LivePostCard({
 /* ── Screen ───────────────────────────────────────────────────────────────── */
 export default function FeedScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const { user, claims } = useAuth();
   const myAvatarUrl = user?.avatarUrl ?? (claims?.picture as string | undefined) ?? null;
   const myName      = user?.fullName  ?? (claims?.name  as string | undefined) ?? 'You Me';
@@ -384,10 +395,10 @@ export default function FeedScreen() {
   const posts = data?.data ?? [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.mist }}>
-      <MaxWidthContainer style={{ backgroundColor: C.mist }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <MaxWidthContainer style={{ backgroundColor: colors.background }}>
         {/* App bar */}
-        <View style={styles.appBar}>
+        <View style={[styles.appBar, { backgroundColor: colors.background }]}>
           <Wordmark />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <TouchableOpacity
@@ -397,7 +408,7 @@ export default function FeedScreen() {
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Text style={{ fontSize: 22 }}>🔔</Text>
-              <View style={styles.notifDot} />
+              <View style={[styles.notifDot, { borderColor: colors.background }]} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.navigate('/profile')} activeOpacity={0.7}>
               <Avatar name={myName} size={30} url={myAvatarUrl} />
@@ -411,8 +422,8 @@ export default function FeedScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.red} />}
         >
           {/* Editorial masthead */}
-          <View style={styles.masthead}>
-            <Text style={styles.mastheadTitle}>
+          <View style={[styles.masthead, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <Text style={[styles.mastheadTitle, { color: colors.text }]}>
               {'Hi ' + myName + '!'}
             </Text>
           </View>

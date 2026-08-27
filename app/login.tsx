@@ -41,22 +41,6 @@ function Wordmark() {
   );
 }
 
-function LinkedInIcon() {
-  return (
-    <View style={styles.linkedInIcon}>
-      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800', lineHeight: 16 }}>in</Text>
-    </View>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <View style={styles.googleIcon}>
-      <Text style={{ color: '#4285F4', fontSize: 14, fontWeight: '800', lineHeight: 18 }}>G</Text>
-    </View>
-  );
-}
-
 export default function LoginScreen() {
   const router = useRouter();
   const { signInWithToken } = useAuth();
@@ -203,21 +187,13 @@ export default function LoginScreen() {
       {/* Top rail */}
       <View style={styles.topRail}>
         <Wordmark />
-        <TouchableOpacity onPress={openServerSheet} style={{ alignItems: 'flex-end' }}>
-          <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.red, letterSpacing: 0.5, lineHeight: 16 }}>
-            dev · server
-          </Text>
-          <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, letterSpacing: 0.5, lineHeight: 16 }}>
-            est. pune
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* Hero */}
       <View style={styles.hero}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
           <View style={{ width: 16, height: 1, backgroundColor: C.red, marginRight: 8 }} />
-          <Text style={{ fontFamily: Fonts.mono, fontSize: 11, color: C.red, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+          <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.red, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '600' }}>
             A community of curious minds
           </Text>
         </View>
@@ -236,46 +212,6 @@ export default function LoginScreen() {
       {/* Auth buttons */}
       <View style={styles.authBlock}>
         <TouchableOpacity
-          style={[styles.linkedInBtn, busy && { opacity: 0.6 }]}
-          onPress={handleLinkedIn}
-          disabled={busy}
-          activeOpacity={0.88}
-        >
-          {loading === 'linkedin' ? (
-            <ActivityIndicator color={C.ink} />
-          ) : (
-            <>
-              <LinkedInIcon />
-              <Text style={styles.linkedInBtnText}>Continue with LinkedIn</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.googleBtn, busy && { opacity: 0.6 }]}
-          onPress={handleGoogle}
-          disabled={busy}
-          activeOpacity={0.88}
-        >
-          {loading === 'google' ? (
-            <ActivityIndicator color={C.ink} />
-          ) : (
-            <>
-              <GoogleIcon />
-              <Text style={styles.googleBtnText}>Continue with Google</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, marginHorizontal: 10, letterSpacing: 1 }}>
-            or
-          </Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TouchableOpacity
           style={[styles.emailBtn, busy && { opacity: 0.6 }]}
           onPress={handleEmail}
           disabled={busy}
@@ -286,12 +222,10 @@ export default function LoginScreen() {
 
         <Text style={styles.legal}>
           By continuing you agree to our{' '}
-          <Text style={{ color: C.ink, textDecorationLine: 'underline' }}>Code of Conduct</Text>.
+          <Text style={{ color: C.ink, textDecorationLine: 'underline', fontWeight: '500' }}>Code of Conduct</Text>.
           {'\n'}Access is invite-verified.
         </Text>
       </View>
-
-      <View style={styles.bottomRule} />
 
       {/* Dev token modal */}
       <Modal
@@ -515,34 +449,29 @@ const styles = StyleSheet.create({
   },
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   dividerLine: { flex: 1, height: 1, backgroundColor: C.hair },
-  emailBtn: {
-    height: 54,
+  devPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 12,
+    backgroundColor: C.mist,
     borderWidth: 1,
     borderColor: C.hair,
-    backgroundColor: C.paper,
+  },
+  emailBtn: {
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: C.ink,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  emailBtnText: { color: C.ink, fontSize: 15, fontWeight: '500' },
+  emailBtnText: { color: C.paper, fontSize: 16, fontWeight: '600', letterSpacing: -0.2 },
   legal: { fontSize: 11, color: C.muted, textAlign: 'center', lineHeight: 17, marginTop: 4 },
-  linkedInIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 3,
-    backgroundColor: '#0A66C2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomRule: {
-    height: 3,
-    width: 28,
-    backgroundColor: C.red,
-    alignSelf: 'center',
-    marginBottom: 12,
-    borderRadius: 2,
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

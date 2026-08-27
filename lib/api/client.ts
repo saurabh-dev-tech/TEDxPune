@@ -125,7 +125,7 @@ export async function apiRequest<T>(
       unauthorizedHandler?.();
     }
     const message =
-      (typeof payload === 'object' && payload?.message) ||
+      (typeof payload === 'object' && (payload?.message || payload?.error || payload?.detail)) ||
       (typeof payload === 'string' && payload) ||
       `Request failed with status ${response.status}`;
     const apiErr = new ApiError(response.status, String(message), payload);

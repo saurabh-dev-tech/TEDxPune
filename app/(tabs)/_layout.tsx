@@ -58,12 +58,14 @@ function ProfileIcon({ color }: { color: string }) {
  * to the OS's adaptive material (Liquid Glass on iOS 26+, vibrancy on
  * earlier versions). A 1px hairline mirrors the system tab bar.
  */
-function GlassTabBackground() {
+import { useTheme } from '@/lib/theme/context';
+
+function GlassTabBackground({ isDark }: { isDark: boolean }) {
   return (
     <View style={StyleSheet.absoluteFill}>
       <BlurView
-        tint="systemChromeMaterial"
-        intensity={100}
+        tint={isDark ? 'dark' : 'light'}
+        intensity={95}
         style={StyleSheet.absoluteFill}
       />
       <View
@@ -71,7 +73,7 @@ function GlassTabBackground() {
           position: 'absolute',
           top: 0, left: 0, right: 0,
           height: StyleSheet.hairlineWidth,
-          backgroundColor: 'rgba(60,60,67,0.18)',
+          backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(60,60,67,0.18)',
         }}
       />
     </View>
@@ -81,6 +83,7 @@ function GlassTabBackground() {
 import { useWindowDimensions } from 'react-native';
 
 export default function TabLayout() {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const isIOS = Platform.OS === 'ios';
   const { width } = useWindowDimensions();
@@ -103,9 +106,9 @@ export default function TabLayout() {
         shadowOpacity: 0,
       }
     : {
-        backgroundColor: C.paper,
+        backgroundColor: colors.card,
         borderTopWidth: 1,
-        borderTopColor: C.hair,
+        borderTopColor: colors.border,
         height: tabBarHeight,
         paddingTop: 8,
         paddingBottom: insets.bottom + 4,
@@ -121,32 +124,29 @@ export default function TabLayout() {
         marginLeft: -360,
         borderLeftWidth: 1,
         borderRightWidth: 1,
-        borderColor: '#e2e8f0',
-        backgroundColor: C.paper, // solid background on tablet so transparent iOS blur doesn't look weird when centered
+        borderColor: colors.border,
+        backgroundColor: colors.card,
       }
     : {};
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: C.ink,
-        tabBarInactiveTintColor: C.faint,
+        tabBarActiveTintColor: C.red,
+        tabBarInactiveTintColor: isDark ? '#9CA3AF' : '#52525B',
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
           ...baseTabStyle,
           ...tabletTabStyle,
         },
-        tabBarBackground: (isIOS && !isTablet) ? GlassTabBackground : undefined,
-        // Slight nudge so labels read on the blurred bg on iOS
+        tabBarBackground: (isIOS && !isTablet) ? () => <GlassTabBackground isDark={isDark} /> : undefined,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '500',
+          fontWeight: '600',
           marginTop: 3,
         },
         tabBarItemStyle: {
-          // Make sure the full button area (incl. label) is hit-testable —
-          // RN Bottom Tabs sometimes leaves the label without a hitSlop on Android.
           paddingVertical: 0,
         },
       }}
