@@ -11,7 +11,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { ErrorToastContainer } from '@/components/error-toast';
 import { ConsentModal } from '@/components/consent-modal';
 import { hasUserConsented } from '@/lib/auth/consent';
-import { registerForPushNotificationsAsync, registerPushToken } from '@/lib/notifications';
+import { registerForPushNotificationsAsync, useNotificationObserver } from '@/lib/notifications/push';
 import { C } from '@/constants/theme';
 
 export const unstable_settings = {
@@ -30,10 +30,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const [checkingConsent, setCheckingConsent] = useState(true);
   const [showConsentModal, setShowConsentModal] = useState(false);
 
+  // Observe notification clicks and navigate to /post/[id]
+  useNotificationObserver();
+
   // Register push notifications when authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      registerPushToken()
+      registerForPushNotificationsAsync()
         .catch((err) => {
           console.warn('[App] Push registration non-fatal error:', err);
         });

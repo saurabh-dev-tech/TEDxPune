@@ -82,11 +82,19 @@ export default function NotificationsScreen() {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const handleMarkAsRead = async (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
-    );
-    await NotificationsApi.markAsRead(id);
+  const handleNotificationPress = async (item: AppNotification) => {
+    if (!item.read) {
+      setNotifications(prev =>
+        prev.map(n => (n.id === item.id ? { ...n, read: true } : n))
+      );
+      NotificationsApi.markAsRead(item.id).catch(() => {});
+    }
+
+    if (item.postId) {
+      router.push(`/post/${item.postId}` as any);
+    } else if (item.actionUrl) {
+      router.push(item.actionUrl as any);
+    }
   };
 
   const handleMarkAllAsRead = async () => {
@@ -192,7 +200,7 @@ export default function NotificationsScreen() {
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    onPress={() => handleMarkAsRead(item.id)}
+                    onPress={() => handleNotificationPress(item)}
                     style={[
                       styles.itemCard,
                       {

@@ -10,6 +10,7 @@ export interface AppNotification {
   actionUrl?: string;
   avatarUrl?: string;
   authorName?: string;
+  postId?: string;
 }
 
 export const NotificationsApi = {
@@ -22,19 +23,25 @@ export const NotificationsApi = {
         ? raw.items
         : Array.isArray(raw?.data)
         ? raw.data
+        : Array.isArray(raw?.notifications)
+        ? raw.notifications
         : [];
 
-      return items.map((item: any) => ({
-        id: item.id ?? String(Math.random()),
-        type: item.type ?? 'system',
-        title: item.title ?? 'Notification',
-        body: item.body ?? '',
-        read: Boolean(item.read ?? item.is_read ?? false),
-        createdAt: item.createdAt ?? item.created_at ?? new Date().toISOString(),
-        actionUrl: item.actionUrl ?? item.action_url,
-        avatarUrl: item.avatarUrl ?? item.avatar_url,
-        authorName: item.authorName ?? item.author_name,
-      }));
+      return items.map((item: any) => {
+        const postId = item.postId ?? item.post_id ?? item.data?.postId ?? item.data?.post_id;
+        return {
+          id: String(item.id ?? Math.random()),
+          type: item.type ?? 'announcement',
+          title: item.title ?? (item.type === 'announcement' ? 'New Announcement' : 'Notification'),
+          body: item.body ?? item.message ?? item.content ?? '',
+          read: Boolean(item.read ?? item.is_read ?? false),
+          createdAt: item.createdAt ?? item.created_at ?? new Date().toISOString(),
+          actionUrl: item.actionUrl ?? item.action_url ?? (postId ? `/post/${postId}` : undefined),
+          avatarUrl: item.avatarUrl ?? item.avatar_url,
+          authorName: item.authorName ?? item.author_name,
+          postId: postId ? String(postId) : undefined,
+        };
+      });
     } catch (err) {
       console.warn('[NotificationsApi] Error fetching notifications:', err);
       return [];
