@@ -13,21 +13,26 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { C, Fonts } from '@/constants/theme';
 import { Avatar } from '@/components/tedx/avatar';
 import { useAuth } from '@/lib/auth/context';
 import { UsersApi } from '@/lib/api/users';
 import { nameFromClaims, pictureFromClaims } from '@/lib/auth/jwt';
 import { MaxWidthContainer } from '@/components/tedx/max-width-container';
+import { pickProfileImage, uploadImageToCloudinary } from '@/lib/cloudinary';
+
+import { useTheme } from '@/lib/theme/context';
 
 function SectionHeader({ children }: { children: string }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
       <View style={{ width: 12, height: 1, backgroundColor: C.red }} />
       <Text style={{
         fontFamily: Fonts.mono,
         fontSize: 10,
-        color: C.slate,
+        color: colors.subtext,
         letterSpacing: 1.4,
         textTransform: 'uppercase',
         fontWeight: '600',
@@ -39,24 +44,28 @@ function SectionHeader({ children }: { children: string }) {
 }
 
 function FieldLabel({ children }: { children: string }) {
+  const { colors } = useTheme();
   return (
-    <Text style={styles.fieldLabel}>{children}</Text>
+    <Text style={[styles.fieldLabel, { color: colors.subtext }]}>{children}</Text>
   );
 }
 
 function InfoRow({ icon, value }: { icon: string; value: string }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
       <Text style={{ fontSize: 14, width: 20, textAlign: 'center' }}>{icon}</Text>
-      <Text style={{ fontSize: 14, color: C.slate, flex: 1 }}>{value}</Text>
+      <Text style={{ fontSize: 14, color: colors.subtext, flex: 1 }}>{value}</Text>
     </View>
   );
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, claims, refreshUser, setUser, signOut } = useAuth();
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Edit field state
   const [editName, setEditName] = useState('');
@@ -73,6 +82,36 @@ export default function ProfileScreen() {
   useEffect(() => {
     refreshUser().catch(() => {});
   }, [refreshUser]);
+
+  const handlePickAndUploadAvatar = async () => {
+    if (uploadingAvatar) return;
+    try {
+      const asset = await pickProfileImage();
+      if (!asset) return; // User cancelled
+
+      setUploadingAvatar(true);
+      const mimeType = asset.mimeType || 'image/jpeg';
+      const fileName = asset.fileName || 'profile.jpg';
+
+      let updatedUser;
+      try {
+        const cloudUrl = await uploadImageToCloudinary(asset);
+        updatedUser = await UsersApi.updateMe({ avatarUrl: cloudUrl });
+      } catch (cloudErr) {
+        console.warn('[AvatarUpload] Cloudinary upload failed, falling back to backend upload:', cloudErr);
+        updatedUser = await UsersApi.uploadAvatar(asset.uri, mimeType, fileName);
+      }
+
+      setUser(updatedUser);
+      setEditAvatarUrl(updatedUser.avatarUrl || '');
+      Alert.alert('Success', 'Profile photo updated successfully!');
+    } catch (err: any) {
+      console.error('[AvatarUpload] Error:', err);
+      Alert.alert('Upload failed', err?.message || 'Could not upload avatar. Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const openEdit = () => {
     setEditName(user?.fullName ?? '');
@@ -116,7 +155,14 @@ export default function ProfileScreen() {
   const handleSignOut = () => {
     Alert.alert('Sign out?', "You'll need to sign in again to access the community.", [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+      { 
+        text: 'Sign out', 
+        style: 'destructive', 
+        onPress: async () => {
+          await signOut();
+          router.replace('/login');
+        }
+      },
     ]);
   };
 
@@ -136,9 +182,11 @@ export default function ProfileScreen() {
   const joinedYear     = user?.createdAt  ? new Date(user.createdAt).getFullYear() : null;
   const postsCount     = user?.postsCount ?? null;
 
+  const { colors, isDark } = useTheme();
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }}>
-      <MaxWidthContainer style={{ backgroundColor: C.paper }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <MaxWidthContainer style={{ backgroundColor: colors.background }}>
         <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
           {/* Banner */}
@@ -166,19 +214,47 @@ export default function ProfileScreen() {
 
             {/* Avatar + Edit button */}
             <View style={{ marginTop: -38, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-              <Avatar name={displayName} size={86} ring url={avatarUrl} />
+              <TouchableOpacity
+                onPress={handlePickAndUploadAvatar}
+                disabled={uploadingAvatar}
+                activeOpacity={0.8}
+                style={{ position: 'relative' }}
+              >
+                <Avatar name={displayName} size={86} ring url={avatarUrl} />
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: 2,
+                    right: 2,
+                    backgroundColor: C.red,
+                    borderRadius: 14,
+                    width: 28,
+                    height: 28,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 2,
+                    borderColor: colors.background,
+                  }}
+                >
+                  {uploadingAvatar ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={{ fontSize: 13, color: '#FFFFFF' }}>📷</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.editBtn} onPress={openEdit}>
-                <Text style={{ color: C.paper, fontWeight: '600', fontSize: 13 }}>Edit profile</Text>
+                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 13 }}>Edit profile</Text>
               </TouchableOpacity>
             </View>
 
             {/* Name + headline */}
-            <Text style={styles.displayName}>{displayName}</Text>
+            <Text style={[styles.displayName, { color: colors.text }]}>{displayName}</Text>
             {displayHeadline ? (
-              <Text style={styles.displayHeadline}>{displayHeadline}</Text>
+              <Text style={[styles.displayHeadline, { color: colors.subtext }]}>{displayHeadline}</Text>
             ) : (
               <TouchableOpacity onPress={openEdit}>
-                <Text style={[styles.displayHeadline, { color: C.faint, fontStyle: 'italic' }]}>
+                <Text style={[styles.displayHeadline, { color: colors.subtext, fontStyle: 'italic' }]}>
                   Add a headline…
                 </Text>
               </TouchableOpacity>
@@ -187,36 +263,36 @@ export default function ProfileScreen() {
             {/* Meta chips */}
             <View style={styles.metaRow}>
               {displayRole && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>{displayRole.toLowerCase()}</Text>
+                <View style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={[styles.chipText, { color: colors.subtext }]}>{displayRole.toLowerCase()}</Text>
                 </View>
               )}
               {joinedYear && (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>since {joinedYear}</Text>
+                <View style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={[styles.chipText, { color: colors.subtext }]}>since {joinedYear}</Text>
                 </View>
               )}
-              <View style={[styles.chip, { backgroundColor: '#dcfce7' }]}>
+              <View style={[styles.chip, { backgroundColor: isDark ? 'rgba(22,163,74,0.2)' : '#dcfce7' }]}>
                 <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#16a34a', marginRight: 4 }} />
-                <Text style={[styles.chipText, { color: '#15803d' }]}>online</Text>
+                <Text style={[styles.chipText, { color: isDark ? '#4ade80' : '#15803d' }]}>online</Text>
               </View>
             </View>
 
             {/* Stats */}
-            <View style={styles.statsRow}>
+            <View style={[styles.statsRow, { borderColor: colors.border }]}>
               <View style={styles.statCell}>
-                <Text style={styles.statValue}>{postsCount ?? '—'}</Text>
-                <Text style={styles.statLabel}>posts</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>{postsCount ?? '—'}</Text>
+                <Text style={[styles.statLabel, { color: colors.subtext }]}>posts</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
               <View style={styles.statCell}>
-                <Text style={styles.statValue}>—</Text>
-                <Text style={styles.statLabel}>connections</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>—</Text>
+                <Text style={[styles.statLabel, { color: colors.subtext }]}>connections</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
               <View style={styles.statCell}>
-                <Text style={styles.statValue}>—</Text>
-                <Text style={styles.statLabel}>talks</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>—</Text>
+                <Text style={[styles.statLabel, { color: colors.subtext }]}>talks</Text>
               </View>
             </View>
 
@@ -224,10 +300,10 @@ export default function ProfileScreen() {
             <View style={{ marginBottom: 24 }}>
               <SectionHeader>About</SectionHeader>
               {displayBio ? (
-                <Text style={{ fontSize: 14, lineHeight: 22, color: C.ink }}>{displayBio}</Text>
+                <Text style={{ fontSize: 14, lineHeight: 22, color: colors.text }}>{displayBio}</Text>
               ) : (
                 <TouchableOpacity onPress={openEdit}>
-                  <Text style={{ fontSize: 14, lineHeight: 22, color: C.faint, fontStyle: 'italic' }}>
+                  <Text style={{ fontSize: 14, lineHeight: 22, color: colors.subtext, fontStyle: 'italic' }}>
                     Add a bio to tell the community what you're about…
                   </Text>
                 </TouchableOpacity>
@@ -284,10 +360,40 @@ export default function ProfileScreen() {
 
               {/* Avatar preview */}
               <View style={{ alignItems: 'center', marginBottom: 24 }}>
-                <Avatar name={editName || displayName} size={80} ring url={editAvatarUrl || null} />
-                <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, marginTop: 8, letterSpacing: 1 }}>
-                  PROFILE PHOTO
-                </Text>
+                <TouchableOpacity
+                  onPress={handlePickAndUploadAvatar}
+                  disabled={uploadingAvatar || saving}
+                  activeOpacity={0.8}
+                  style={{ alignItems: 'center' }}
+                >
+                  <View style={{ position: 'relative' }}>
+                    <Avatar name={editName || displayName} size={80} ring url={editAvatarUrl || null} />
+                    <View
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        right: 0,
+                        backgroundColor: C.red,
+                        borderRadius: 12,
+                        width: 26,
+                        height: 26,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 2,
+                        borderColor: C.paper,
+                      }}
+                    >
+                      {uploadingAvatar ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={{ fontSize: 12, color: '#FFFFFF' }}>📷</Text>
+                      )}
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 12, color: C.red, fontWeight: '600', marginTop: 8 }}>
+                    {uploadingAvatar ? 'Uploading photo...' : 'Change profile photo'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               {/* ── Basic ── */}
@@ -305,18 +411,6 @@ export default function ProfileScreen() {
                   editable={!saving}
                 />
 
-                <FieldLabel>Avatar URL</FieldLabel>
-                <TextInput
-                  style={styles.field}
-                  value={editAvatarUrl}
-                  onChangeText={setEditAvatarUrl}
-                  placeholder="https://…"
-                  placeholderTextColor={C.faint}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                  editable={!saving}
-                />
               </View>
 
               {/* ── About ── */}
@@ -328,12 +422,40 @@ export default function ProfileScreen() {
                   style={styles.field}
                   value={editHeadline}
                   onChangeText={setEditHeadline}
-                  placeholder="One-liner about what you do"
+                  placeholder="One-liner about what you do (e.g., Speaker | AI Researcher)"
                   placeholderTextColor={C.faint}
                   maxLength={160}
                   editable={!saving}
                 />
-                <Text style={styles.charCount}>{editHeadline.length} / 160</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 11, color: C.slate }}>Add role tag:</Text>
+                    {['Speaker', 'Organizer'].map((tag) => {
+                      const hasTag = editHeadline.toLowerCase().includes(tag.toLowerCase());
+                      return (
+                        <TouchableOpacity
+                          key={tag}
+                          disabled={saving || hasTag}
+                          onPress={() => {
+                            if (!hasTag) {
+                              const trimmed = editHeadline.trim();
+                              setEditHeadline(trimmed ? `${trimmed} · ${tag}` : tag);
+                            }
+                          }}
+                          style={[
+                            styles.tagChip,
+                            hasTag && styles.tagChipActive
+                          ]}
+                        >
+                          <Text style={[styles.tagChipText, hasTag && styles.tagChipTextActive]}>
+                            {hasTag ? `✓ ${tag}` : `+ ${tag}`}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <Text style={styles.charCount}>{editHeadline.length} / 160</Text>
+                </View>
 
                 <FieldLabel>Bio</FieldLabel>
                 <TextInput
@@ -610,5 +732,26 @@ const styles = StyleSheet.create({
     color: C.faint,
     textAlign: 'right',
     marginTop: 4,
+  },
+  tagChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: C.mist,
+    borderWidth: 1,
+    borderColor: C.hair,
+  },
+  tagChipActive: {
+    backgroundColor: `${C.red}15`,
+    borderColor: C.red,
+  },
+  tagChipText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: C.slate,
+  },
+  tagChipTextActive: {
+    color: C.red,
+    fontWeight: '600',
   },
 });

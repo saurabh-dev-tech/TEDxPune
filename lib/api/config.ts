@@ -34,16 +34,27 @@ export function subscribeApiBaseUrl(fn: (url: string) => void): () => void {
 
 function defaultBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL;
+
+  if (__DEV__) {
+    const hostUri =
+      (Constants.expoConfig as any)?.hostUri ||
+      (Constants.manifest2 as any)?.extra?.expoGo?.developer?.hostUri ||
+      (Constants as any).manifest?.debuggerHost;
+
+    if (hostUri) {
+      const host = String(hostUri).split(':')[0];
+      // Auto-derive port 3000 on host machine if env is unset or points to localhost
+      if (!fromEnv || fromEnv.includes('localhost') || fromEnv.includes('127.0.0.1')) {
+        return `http://${host}:3000/api/v1`;
+      }
+    }
+  }
+
   if (fromEnv) return fromEnv.replace(/\/+$/, '');
 
-  const hostUri =
-    (Constants.expoConfig as any)?.hostUri ||
-    (Constants.manifest2 as any)?.extra?.expoGo?.developer?.hostUri ||
-    (Constants as any).manifest?.debuggerHost;
-
-  if (hostUri && __DEV__) {
-    const host = String(hostUri).split(':')[0];
-    return `http://${host}:3000/api/v1`;
+  // Fallback for production build if env vars are missing
+  if (!__DEV__) {
+    return 'https://tedxpune-be-production.up.railway.app/api/v1';
   }
 
   const fallbackHost = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
@@ -51,7 +62,9 @@ function defaultBaseUrl(): string {
 }
 
 export function getApiBaseUrl(): string {
-  return runtimeOverride ?? defaultBaseUrl();
+  const url = runtimeOverride ?? defaultBaseUrl();
+  console.log(`[API] Resolved Base URL: ${url}`);
+  return url;
 }
 
 /**

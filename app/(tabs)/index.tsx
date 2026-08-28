@@ -2,33 +2,39 @@ import React, { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Platform, RefreshControl, ActivityIndicator,
-  Image, Alert, useColorScheme,
+  Image, Alert, useColorScheme, Modal, Dimensions,
+  TextInput, KeyboardAvoidingView,
 } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
+import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { C, Fonts } from '@/constants/theme';
 import { Avatar } from '@/components/tedx/avatar';
 import { useAuth } from '@/lib/auth/context';
 import { useApi } from '@/lib/hooks/use-api';
 import { PostsApi } from '@/lib/api/posts';
-import type { Post, PollOption } from '@/lib/api/types';
+import type { Post, PollOption, Comment } from '@/lib/api/types';
 
+import { useTheme } from '@/lib/theme/context';
 import { MaxWidthContainer } from '@/components/tedx/max-width-container';
 
 /* ── Wordmark ─────────────────────────────────────────────────────────────── */
 function Wordmark() {
-  const colorScheme = useColorScheme();
-  const logo = colorScheme === 'dark'
-    ? require('@/assets/images/logo-light.png')
-    : require('@/assets/images/logo-dark.png');
+  const { isDark } = useTheme();
+  const logo = isDark
+    ? require('@/assets/images/logo-white.png')
+    : require('@/assets/images/logo-black.png');
 
   return (
-    <Image
-      source={logo}
-      style={{ width: 114, height: 24 }}
-      resizeMode="contain"
-    />
+    <View style={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+      <Image
+        source={logo}
+        style={{ width: 180, height: 60 }}
+        resizeMode="contain"
+      />
+    </View>
   );
 }
 
@@ -74,6 +80,7 @@ function PollBlock({
   userVoteOptionId: string | null | undefined;
   onVote: (optionId: string) => void;
 }) {
+  const { colors, isDark } = useTheme();
   const hasVoted = !!userVoteOptionId;
   const totalVotes = options.reduce((s, o) => s + o.voteCount, 0);
 
@@ -89,28 +96,32 @@ function PollBlock({
             disabled={hasVoted}
             onPress={() => onVote(opt.id)}
             activeOpacity={0.75}
-            style={[styles.pollOption, isChosen && styles.pollOptionChosen]}
+            style={[
+              styles.pollOption,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+              isChosen && { borderColor: C.red, backgroundColor: isDark ? C.darkRedSoft : C.redSoft }
+            ]}
           >
             {/* Vote bar */}
             {hasVoted && (
               <View style={[styles.pollBar, { width: `${pct}%` as any }]} />
             )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-              <Text style={[styles.pollOptionText, isChosen && { color: C.red, fontWeight: '600' }]}>
+              <Text style={[styles.pollOptionText, { color: colors.text }, isChosen && { color: C.red, fontWeight: '600' }]}>
                 {isChosen ? '✓ ' : ''}{opt.optionText}
               </Text>
               {hasVoted && (
-                <Text style={styles.pollPct}>{pct}%</Text>
+                <Text style={[styles.pollPct, { color: colors.subtext }]}>{pct}%</Text>
               )}
             </View>
           </TouchableOpacity>
         );
       })}
       {!hasVoted && (
-        <Text style={styles.pollHint}>Tap an option to vote</Text>
+        <Text style={[styles.pollHint, { color: colors.subtext }]}>Tap an option to vote</Text>
       )}
       {hasVoted && (
-        <Text style={styles.pollHint}>{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</Text>
+        <Text style={[styles.pollHint, { color: colors.subtext }]}>{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</Text>
       )}
     </View>
   );
@@ -122,16 +133,26 @@ function KudosButton({
 }: {
   kudoed: boolean; kudosCount: number; onPress: () => void; busy: boolean;
 }) {
+  const { colors, isDark } = useTheme();
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={busy}
-      style={[styles.kudosBtn, kudoed && styles.kudosBtnActive]}
+      style={[
+        styles.kudosBtn,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        kudoed && { borderColor: `${C.red}50`, backgroundColor: isDark ? C.darkRedSoft : C.redSoft }
+      ]}
       activeOpacity={0.75}
     >
-      <Text style={{ fontSize: 14, marginRight: 5 }}>{kudoed ? '👏' : '🤝'}</Text>
-      <Text style={[styles.kudosLabel, kudoed && { color: C.red }]}>
-        {kudosCount > 0 ? `${kudosCount}` : ''}
+      <Ionicons
+        name={kudoed ? 'thumbs-up' : 'thumbs-up-outline'}
+        size={16}
+        color={kudoed ? C.red : colors.subtext}
+        style={{ marginRight: 6 }}
+      />
+      <Text style={[styles.kudosLabel, { color: colors.subtext }, kudoed && { color: C.red, fontWeight: '600' }]}>
+        {kudosCount}
       </Text>
     </TouchableOpacity>
   );
@@ -146,6 +167,8 @@ function LivePostCard({
   onKudosToggled: (id: string, kudoed: boolean, kudosCount: number) => void;
   onPollVoted: (id: string, optionId: string) => void;
 }) {
+  const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [kudosBusy, setKudosBusy] = useState(false);
   const [pollBusy,  setPollBusy]  = useState(false);
   const postNum = String(index + 1).padStart(2, '0');
@@ -181,57 +204,99 @@ function LivePostCard({
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: isDark ? 1 : 0 }]}>
       {/* Colour accent bar */}
       <View style={[styles.cardAccent, { backgroundColor: accent }]} />
 
-      {/* Author row */}
-      <View style={styles.cardHeader}>
-        <Avatar name={post.author.fullName} size={42} url={post.author.avatarUrl} />
-        <View style={styles.authorInfo}>
-          <Text style={styles.authorName}>{post.author.fullName}</Text>
-          {!!post.author.headline && (
-            <Text style={styles.authorHeadline}>{post.author.headline}</Text>
-          )}
+      <TouchableOpacity
+        activeOpacity={0.95}
+        onPress={() => router.push(`/post/${post.id}`)}
+      >
+        {/* Author row */}
+        <View style={styles.cardHeader}>
+          <Avatar name={post.author.fullName} size={42} url={post.author.avatarUrl} />
+          <View style={styles.authorInfo}>
+            <Text style={[styles.authorName, { color: colors.text }]}>{post.author.fullName}</Text>
+            {!!post.author.headline && (
+              <Text style={[styles.authorHeadline, { color: colors.subtext }]}>{post.author.headline}</Text>
+            )}
+          </View>
+          <View style={[styles.timePill, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.timeText, { color: colors.subtext }]}>{timeAgo(post.createdAt)}</Text>
+          </View>
         </View>
-        <View style={styles.timePill}>
-          <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
-        </View>
-      </View>
 
-      {/* Body */}
-      <Text style={styles.bodyText}>{post.body}</Text>
+        {/* Body */}
+        <Text style={[styles.bodyText, { color: colors.text }]}>{post.body}</Text>
+      </TouchableOpacity>
 
       {/* ── Image ── */}
       {post.postType === 'image' && !!post.imageUrl && (
-        <View style={styles.mediaContainer}>
+        <TouchableOpacity
+          activeOpacity={0.95}
+          onPress={() => router.push(`/post/${post.id}`)}
+          style={styles.mediaContainer}
+        >
           <Image
             source={{ uri: post.imageUrl }}
             style={styles.mediaImage}
             resizeMode="cover"
           />
-        </View>
+        </TouchableOpacity>
       )}
 
       {/* ── Video ── */}
       {post.postType === 'video' && !!post.videoUrl && (() => {
         const ytId = extractYoutubeId(post.videoUrl);
-        if (!ytId) return null;
+        if (ytId) {
+          return (
+            <View style={styles.videoContainer}>
+              <YoutubePlayer
+                height={200}
+                videoId={ytId}
+                play={false}
+                webViewProps={{
+                  allowsInlineMediaPlayback: true,
+                  mediaPlaybackRequiresUserAction: true,
+                }}
+                initialPlayerParams={{
+                  modestbranding: true,
+                  rel: false,
+                  preventFullScreen: false,
+                }}
+              />
+            </View>
+          );
+        }
+
+        // Fallback for direct video links (e.g. Cloudinary, Supabase)
         return (
           <View style={styles.videoContainer}>
-            <YoutubePlayer
-              height={200}
-              videoId={ytId}
-              play={false}
-              webViewProps={{
-                allowsInlineMediaPlayback: true,
-                mediaPlaybackRequiresUserAction: true,
+            <WebView
+              source={{
+                html: `
+                  <!DOCTYPE html>
+                  <html>
+                    <head>
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                      <style>
+                        body, html { margin: 0; padding: 0; background: #000; width: 100%; height: 100%; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+                        video { width: 100%; height: 100%; object-fit: contain; }
+                      </style>
+                    </head>
+                    <body>
+                      <video id="video-player" controls playsinline>
+                        <source src="${post.videoUrl}" type="video/mp4">
+                      </video>
+                    </body>
+                  </html>
+                `
               }}
-              initialPlayerParams={{
-                modestbranding: true,
-                rel: false,
-                preventFullScreen: false,
-              }}
+              style={{ flex: 1, backgroundColor: '#000' }}
+              allowsInlineMediaPlayback={true}
+              mediaPlaybackRequiresUserAction={true}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
             />
           </View>
         );
@@ -250,15 +315,32 @@ function LivePostCard({
 
       {/* Footer: kudos + index */}
       <View style={styles.cardFooter}>
-        <KudosButton
-          kudoed={post.kudoed}
-          kudosCount={post.kudosCount}
-          onPress={handleKudos}
-          busy={kudosBusy}
-        />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <KudosButton
+            kudoed={post.kudoed}
+            kudosCount={post.kudosCount}
+            onPress={handleKudos}
+            busy={kudosBusy}
+          />
+          <TouchableOpacity
+            onPress={() => router.push(`/post/${post.id}`)}
+            style={[styles.commentBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            activeOpacity={0.75}
+          >
+            <Ionicons
+              name="chatbubble-outline"
+              size={16}
+              color={C.slate}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.commentLabel}>
+              {post.commentsCount ?? 0}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.footerRight}>
-          <View style={styles.footerLine} />
-          <Text style={styles.postIndex}>{postNum}</Text>
+          {/* <View style={styles.footerLine} /> */}
+          {/* <Text style={styles.postIndex}>{postNum}</Text> */}
         </View>
       </View>
     </View>
@@ -268,6 +350,7 @@ function LivePostCard({
 /* ── Screen ───────────────────────────────────────────────────────────────── */
 export default function FeedScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const { user, claims } = useAuth();
   const myAvatarUrl = user?.avatarUrl ?? (claims?.picture as string | undefined) ?? null;
   const myName      = user?.fullName  ?? (claims?.name  as string | undefined) ?? 'You Me';
@@ -312,16 +395,21 @@ export default function FeedScreen() {
   const posts = data?.data ?? [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.mist }}>
-      <MaxWidthContainer style={{ backgroundColor: C.mist }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <MaxWidthContainer style={{ backgroundColor: colors.background }}>
         {/* App bar */}
-        <View style={styles.appBar}>
+        <View style={[styles.appBar, { backgroundColor: colors.background }]}>
           <Wordmark />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View style={{ position: 'relative' }}>
+            <TouchableOpacity
+              onPress={() => router.push('/notifications')}
+              activeOpacity={0.7}
+              style={{ position: 'relative' }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Text style={{ fontSize: 22 }}>🔔</Text>
-              <View style={styles.notifDot} />
-            </View>
+              <View style={[styles.notifDot, { borderColor: colors.background }]} />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.navigate('/profile')} activeOpacity={0.7}>
               <Avatar name={myName} size={30} url={myAvatarUrl} />
             </TouchableOpacity>
@@ -334,27 +422,18 @@ export default function FeedScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.red} />}
         >
           {/* Editorial masthead */}
-          <View style={styles.masthead}>
-            <View style={styles.mastheadLabel}>
-              <View style={styles.mastheadLine} />
-              <Text style={styles.mastheadMeta}>
-                Today's issue · {new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
-              </Text>
-            </View>
-            <Text style={styles.mastheadTitle}>
-              {'What the community is\n'}
-              <Text style={{ fontStyle: 'italic' }}>thinking</Text>
-              {' today.'}
+          <View style={[styles.masthead, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <Text style={[styles.mastheadTitle, { color: colors.text }]}>
+              {'Hi ' + myName + '!'}
             </Text>
           </View>
 
           {/* Section header */}
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderInner}>
-              <View style={styles.sectionDot} />
-              <Text style={styles.sectionLabel}>Latest from the community</Text>
+              {/* <View style={styles.sectionDot} /> */}
             </View>
-            {data && <Text style={styles.sectionCount}>{data.total} posts</Text>}
+            {/* {data && <Text style={styles.sectionCount}>{data.total} posts</Text>} */}
           </View>
 
           {/* Loading */}
@@ -405,6 +484,8 @@ export default function FeedScreen() {
 }
 
 /* ── Styles ───────────────────────────────────────────────────────────────── */
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 const shadow = Platform.select({
   ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 10 },
   android: { elevation: 3 },
@@ -430,7 +511,7 @@ const styles = StyleSheet.create({
   mastheadLabel: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   mastheadLine: { width: 16, height: 1.5, backgroundColor: C.red, marginRight: 8 },
   mastheadMeta: { fontFamily: Fonts.mono, fontSize: 10, color: C.red, letterSpacing: 1.8, textTransform: 'uppercase' },
-  mastheadTitle: { fontFamily: Fonts.serif, fontSize: 34, lineHeight: 38, letterSpacing: -0.8, color: C.ink },
+  mastheadTitle: { fontFamily: Fonts.serif, fontSize: 24, lineHeight: 38, letterSpacing: -0.8, color: C.ink },
 
   /* Section header */
   sectionHeader: {
@@ -512,4 +593,125 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 28, color: C.red, marginBottom: 12 },
   emptyTitle: { fontFamily: Fonts.serif, fontSize: 20, color: C.ink, marginBottom: 8, letterSpacing: -0.3 },
   emptyBody: { fontSize: 13, color: C.muted, textAlign: 'center', lineHeight: 20 },
+
+  /* Modal Styles */
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 22,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalScrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+
+  /* Comment button */
+  commentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.hair,
+    backgroundColor: C.paper,
+  },
+  commentLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: C.slate,
+  },
+
+  /* Inline Comments Styles */
+  inlineCommentsContainer: {
+    borderTopWidth: 1,
+    borderTopColor: C.hair,
+    paddingTop: 10,
+    backgroundColor: C.paper,
+  },
+  noCommentsTextInline: {
+    textAlign: 'center',
+    color: C.faint,
+    fontSize: 12,
+    marginVertical: 10,
+  },
+  inlineCommentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  inlineCommentContent: {
+    flex: 1,
+    backgroundColor: C.mist,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  inlineCommentAuthorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  inlineCommentAuthor: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.ink,
+  },
+  inlineCommentTime: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: C.faint,
+  },
+  inlineCommentBody: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: C.ink,
+  },
+  inlineCommentInputRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: C.hair,
+    alignItems: 'center',
+    gap: 8,
+  },
+  inlineCommentInput: {
+    flex: 1,
+    backgroundColor: C.mist,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    maxHeight: 80,
+    fontSize: 13,
+    color: C.ink,
+  },
+  inlineCommentSendBtn: {
+    backgroundColor: C.red,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

@@ -66,4 +66,33 @@ export const UsersApi = {
     const raw = await api.get<any>(`/users/${id}`);
     return normaliseUser(raw);
   },
+
+  updateConsent: async (consent: boolean = true): Promise<User> => {
+    const body = { consent };
+    let raw;
+    try {
+      raw = await api.patch<any>('/users/me/consent', body);
+    } catch {
+      // Fallback to POST if server expects POST for consent endpoint
+      raw = await api.post<any>('/users/me/consent', body);
+    }
+    return normaliseUser(raw);
+  },
+
+  uploadAvatar: async (fileUri: string, mimeType: string = 'image/jpeg', fileName: string = 'avatar.jpg'): Promise<User> => {
+    const formData = new FormData();
+    // @ts-ignore React Native FormData file format
+    formData.append('file', {
+      uri: fileUri,
+      type: mimeType,
+      name: fileName,
+    });
+
+    const raw = await api.post<any>('/users/me/avatar', formData);
+    return normaliseUser(raw);
+  },
+
+  registerPushToken: async (pushToken: string, platform: string): Promise<any> => {
+    return api.post<any>('/users/push-token', { pushToken, platform });
+  },
 };

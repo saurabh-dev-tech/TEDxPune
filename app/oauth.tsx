@@ -235,8 +235,12 @@ export default function OAuthScreen() {
         // Body had content but no token — try to surface a server error.
         try {
           const parsed = JSON.parse(body);
-          const msg = parsed?.message || parsed?.error || 'Authentication did not return a token.';
-          failAndDismiss('Sign-in failed', String(msg));
+          const msg = String(parsed?.message || parsed?.error || 'Authentication did not return a token.');
+          if (msg.toLowerCase().includes('not part of the tribe')) {
+            failAndDismiss('Access Denied', 'You are not part of the tribe. Only ticket holders and whitelisted members can log in.');
+          } else {
+            failAndDismiss('Sign-in failed', msg);
+          }
         } catch {
           failAndDismiss('Sign-in failed', 'Authentication did not return a token.');
         }

@@ -18,7 +18,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { C, Fonts } from '@/constants/theme';
 import { useAuth } from '@/lib/auth/context';
-import { ExchangeApi } from '@/lib/api/auth';
+import { ExchangeApi, EmailAuthApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
 import {
   getSupabase,
@@ -81,32 +81,96 @@ export default function EmailAuthScreen() {
 
   const emailValid = EMAIL_RE.test(email.trim());
 
+  const checkEmailInDb = async (rawEmail: string): Promise<boolean> => {
+    const cleanEmail = rawEmail.trim().toLowerCase();
+    const supabase = getSupabase();
+
+    try {
+      // 1. Check whitelisted_users table with "Attendee Email" column
+      const { data: wData1, error: wErr1 } = await supabase
+        .from('whitelisted_users')
+        .select('*')
+        .ilike('Attendee Email', cleanEmail)
+        .limit(1);
+
+      if (!wErr1 && wData1 && wData1.length > 0) {
+        return true;
+      }
+
+      // 1b. Fuzzy match (in case of leading/trailing spaces in DB records)
+      const { data: wData1b, error: wErr1b } = await supabase
+        .from('whitelisted_users')
+        .select('*')
+        .ilike('Attendee Email', `%${cleanEmail}%`)
+        .limit(1);
+
+      if (!wErr1b && wData1b && wData1b.length > 0) {
+        return true;
+      }
+
+      // 2. Check whitelisted_users table with "email" column (fallback)
+      const { data: wData2, error: wErr2 } = await supabase
+        .from('whitelisted_users')
+        .select('*')
+        .ilike('email', cleanEmail)
+        .limit(1);
+
+      if (!wErr2 && wData2 && wData2.length > 0) {
+        return true;
+      }
+
+      // 3. Check users table with "email" column
+      const { data: uData, error: uErr } = await supabase
+        .from('users')
+        .select('id, email')
+        .ilike('email', cleanEmail)
+        .limit(1);
+
+      if (!uErr && uData && uData.length > 0) {
+        return true;
+      }
+
+      // If RLS restricted public anon access, allow proceeding so server (service role) validates
+      if (wErr1 || wErr1b || wErr2 || uErr) {
+        console.warn('[email-auth] Whitelist DB query warning, deferring to server auth:', { wErr1, wErr1b, wErr2, uErr });
+        return true;
+      }
+    } catch (err) {
+      console.warn('[email-auth] DB whitelist check exception:', err);
+      return true;
+    }
+
+    return false;
+  };
+
   const requestCode = async (isResend = false) => {
     if (!emailValid || requesting) return;
     if (email.trim().toLowerCase() === 'playstore@tedxpune.com') {
       if (!isResend) setStep('code');
       return;
     }
-    if (!supaConfigured) {
-      setShowConfig(true);
-      return;
-    }
     setRequesting(true);
     setError(null);
+
+    // Backend-driven OTP request
     try {
-      const { error: sbError } = await getSupabase().auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          // Allow new users — flip to false if your Supabase project should
-          // only accept pre-existing accounts.
-          shouldCreateUser: true,
-        },
-      });
-      if (sbError) throw sbError;
+      await EmailAuthApi.requestOtp(email.trim());
       setResendIn(RESEND_COOLDOWN_S);
       if (!isResend) setStep('code');
-    } catch (err: any) {
-      handleSupabaseError(err, 'request');
+    } catch (backendErr: any) {
+      if (backendErr instanceof ApiError) {
+        if (backendErr.status === 403 || backendErr.status === 401 || backendErr.message?.includes('status 403')) {
+          setError('You are not part of the tribe. Only ticket holders and whitelisted members can log in.');
+        } else {
+          setError(
+            (backendErr.message && !backendErr.message.includes('Request failed with status'))
+              ? backendErr.message
+              : 'Failed to send verification code. Please try again.'
+          );
+        }
+      } else {
+        setError(backendErr?.message || 'Failed to send verification code. Please try again.');
+      }
     } finally {
       setRequesting(false);
     }
@@ -141,75 +205,33 @@ export default function EmailAuthScreen() {
       return;
     }
 
-    if (!supaConfigured) {
-      setShowConfig(true);
-      setVerifying(false);
-      return;
-    }
+    // Backend-driven OTP verification
     try {
-      // 1. Verify the OTP with Supabase → Supabase session
-      const { data, error: sbError } = await getSupabase().auth.verifyOtp({
-        email: email.trim(),
-        token: c,
-        type: 'email',
-      });
-      if (sbError) throw sbError;
-      const supabaseToken = data?.session?.access_token;
-      if (!supabaseToken) {
-        setError('Supabase verified the code but did not return a session.');
-        return;
+      const res = await EmailAuthApi.verifyOtp(email.trim(), c);
+      if (res?.accessToken) {
+        await signInWithToken(res.accessToken);
+        router.replace('/(tabs)');
+      } else {
+        setError('Authentication failed: no access token returned from server.');
       }
-
-      // 2. Try to exchange the Supabase token for a backend JWT so /users/me etc. work.
-      //    Best-effort: any failure → fall back to the Supabase token.
-      let backendToken: string = supabaseToken;
-      let usedSupabaseFallback = true;
-      try {
-        const res = await ExchangeApi.fromSupabase(supabaseToken);
-        if (res?.accessToken) {
-          backendToken = res.accessToken;
-          usedSupabaseFallback = false;
+    } catch (backendErr: any) {
+      if (backendErr instanceof ApiError) {
+        if (backendErr.status === 400 || backendErr.status === 401 || backendErr.status === 403) {
+          setError(
+            (backendErr.message && !backendErr.message.includes('Request failed with status'))
+              ? backendErr.message
+              : 'Invalid or expired verification code.'
+          );
+        } else {
+          setError(
+            (backendErr.message && !backendErr.message.includes('Request failed with status'))
+              ? backendErr.message
+              : 'Verification failed. Please try again.'
+          );
         }
-      } catch (err) {
-        // 401/403 means the backend's /auth/exchange explicitly rejected this
-        // user (e.g. invite-only, blocked) — bubble up.
-        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-          throw err;
-        }
-        console.warn(
-          '[email-auth] /auth/exchange unavailable, using Supabase token directly:',
-          (err as Error)?.message
-        );
+      } else {
+        setError(backendErr?.message || 'Verification failed. Please try again.');
       }
-
-      // 3. Hand off to the existing auth pipeline.
-      try {
-        await signInWithToken(backendToken);
-      } catch (err) {
-        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-          // 401 here while using the Supabase fallback is EXPECTED — the
-          // backend's JWT guard correctly rejects a token it didn't sign.
-          // It is NOT "your account isn't allowed".
-          if (usedSupabaseFallback) {
-            throw new BackendExchangeMissingError(
-              'Supabase verified your email, but the backend does not have ' +
-              '/auth/exchange yet. Until that endpoint is deployed, the data ' +
-              'screens will not load.\n\n' +
-              'For now, use "Paste a full JWT here to skip OTP" below with a ' +
-              'real backend JWT (get one from your Swagger UI at /docs).'
-            );
-          }
-          throw err;
-        }
-        // Network / 5xx — token is saved, profile fetch can retry later.
-        console.warn(
-          '[email-auth] post-signin profile fetch failed (continuing anyway):',
-          (err as Error)?.message
-        );
-      }
-      router.replace('/(tabs)');
-    } catch (err: any) {
-      handleSupabaseError(err, 'verify');
     } finally {
       setVerifying(false);
     }
@@ -233,7 +255,11 @@ export default function EmailAuthScreen() {
 
     // Backend-side exchange error
     if (err instanceof ApiError) {
-      if (err.status === 401 || err.status === 403) {
+      if (err.status === 403 || err.message?.toLowerCase().includes('not part of the tribe')) {
+        setError('You are not part of the tribe. Only ticket holders and whitelisted members can log in.');
+        return;
+      }
+      if (err.status === 401) {
         setError('Your account isn\'t allowed in this community. Contact an organizer.');
         return;
       }
@@ -786,23 +812,46 @@ function CodeStep({
           </TouchableOpacity>
         )}
       </View>
+    </View>
+  );
+}
 
-      {__DEV__ && (
-        <Text style={styles.devHint}>
-          dev · paste a full JWT here to skip OTP
-        </Text>
-      )}
+function WhitelistRegisterBanner() {
+  const REGISTRATION_DEADLINE = new Date('2026-10-02T23:59:59');
+  const isBeforeDeadline = new Date() <= REGISTRATION_DEADLINE;
+
+  if (!isBeforeDeadline) return null;
+
+  return (
+    <View style={styles.registerBanner}>
+      <Text style={{ fontFamily: Fonts.mono, fontSize: 9.5, color: C.red, letterSpacing: 1, textTransform: 'uppercase', fontWeight: '700', marginBottom: 4 }}>
+        Become a Member
+      </Text>
+      <Text style={{ fontSize: 13, color: C.ink, lineHeight: 19, marginBottom: 12 }}>
+        You can become a member by registering for TEDxPune!
+      </Text>
+      <TouchableOpacity
+        style={styles.registerBtn}
+        onPress={() => Linking.openURL('https://www.tedxpune.com/register')}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.registerBtnText}>Register for TEDxPune</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 function ErrorBox({ message }: { message: string }) {
+  const isWhitelistError = message.toLowerCase().includes('not part of the tribe');
   return (
-    <View style={styles.errorBox}>
-      <Text style={{ fontFamily: Fonts.mono, fontSize: 9.5, color: C.red, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>
-        Error
-      </Text>
-      <Text style={{ fontSize: 13, color: C.slate, lineHeight: 19 }}>{message}</Text>
+    <View style={{ marginBottom: 16 }}>
+      <View style={styles.errorBox}>
+        <Text style={{ fontFamily: Fonts.mono, fontSize: 9.5, color: C.red, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>
+          Error
+        </Text>
+        <Text style={{ fontSize: 13, color: C.slate, lineHeight: 19 }}>{message}</Text>
+      </View>
+      {isWhitelistError && <WhitelistRegisterBanner />}
     </View>
   );
 }
@@ -946,6 +995,26 @@ const styles = StyleSheet.create({
     backgroundColor: C.redSoft,
     borderWidth: 1,
     borderColor: `${C.red}30`,
+  },
+  registerBanner: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    padding: 16,
+    marginTop: 10,
+  },
+  registerBtn: {
+    backgroundColor: C.red,
+    borderRadius: 10,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  registerBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 13,
   },
   configBannerBtn: {
     alignSelf: 'flex-start',

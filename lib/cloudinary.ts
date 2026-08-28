@@ -1,7 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
+import { Alert } from 'react-native';
 
-const DEFAULT_CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'tedxpune';
-const DEFAULT_UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'tedxpune_profiles';
+const DEFAULT_CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dirarq6it';
+const DEFAULT_UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default';
 
 export interface PickAndUploadResult {
   url?: string;
@@ -13,24 +14,33 @@ export interface PickAndUploadResult {
  * Pick an image from the user's photo gallery.
  */
 export async function pickProfileImage(): Promise<ImagePicker.ImagePickerAsset | null> {
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (status !== 'granted') {
-    throw new Error('Permission to access media library was denied');
+  try {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Please allow access to your photo library in iOS Settings to choose a profile picture.'
+      );
+      return null;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets || result.assets.length === 0) {
+      return null;
+    }
+
+    return result.assets[0];
+  } catch (err: any) {
+    console.error('[pickProfileImage] Error:', err);
+    throw new Error(err?.message || 'Failed to open photo library');
   }
-
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect: [1, 1],
-    quality: 0.8,
-    base64: true,
-  });
-
-  if (result.canceled || !result.assets || result.assets.length === 0) {
-    return null;
-  }
-
-  return result.assets[0];
 }
 
 /**

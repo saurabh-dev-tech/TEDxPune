@@ -58,7 +58,9 @@ export async function apiRequest<T>(
     Accept: 'application/json',
   };
 
-  if (body !== undefined) {
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
+  if (body !== undefined && !isFormData) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -79,7 +81,7 @@ export async function apiRequest<T>(
     response = await fetch(fullUrl, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData ? (body as any) : body !== undefined ? JSON.stringify(body) : undefined,
       signal: signalToUse,
     });
   } catch (err: any) {
@@ -123,7 +125,7 @@ export async function apiRequest<T>(
       unauthorizedHandler?.();
     }
     const message =
-      (typeof payload === 'object' && payload?.message) ||
+      (typeof payload === 'object' && (payload?.message || payload?.error || payload?.detail)) ||
       (typeof payload === 'string' && payload) ||
       `Request failed with status ${response.status}`;
     const apiErr = new ApiError(response.status, String(message), payload);

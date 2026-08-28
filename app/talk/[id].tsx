@@ -15,15 +15,18 @@ import { C, Fonts } from '@/constants/theme';
 import { TalkThumb } from '@/components/tedx/talk-thumb';
 import YoutubePlayer from 'react-native-youtube-iframe';
 
+import { useTheme } from '@/lib/theme/context';
+
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PLAYER_HEIGHT = Math.round((SCREEN_WIDTH * 9) / 16); // 16:9 ratio
 
 function SectionHeader({ children }: { children: string }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
       <View style={{ width: 12, height: 1, backgroundColor: C.red }} />
       <Text style={{
-        fontFamily: Fonts.mono, fontSize: 10, color: C.slate,
+        fontFamily: Fonts.mono, fontSize: 10, color: colors.subtext,
         letterSpacing: 1.4, textTransform: 'uppercase', fontWeight: '600',
       }}>
         {children}
@@ -41,6 +44,7 @@ export default function TalkPlayerScreen() {
     desc?: string;
   }>();
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [isSaved, setIsSaved] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
@@ -62,9 +66,9 @@ export default function TalkPlayerScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       {/* Video player — full width, 16:9 */}
-      <View style={{ backgroundColor: C.ink }}>
+      <View style={{ backgroundColor: '#000' }}>
         {/* Back button overlay */}
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
           <Text style={{ color: '#fff', fontSize: 20, fontWeight: '600', marginTop: -1 }}>‹</Text>
@@ -114,24 +118,24 @@ export default function TalkPlayerScreen() {
       >
         {/* Duration */}
         {duration ? (
-          <Text style={styles.durationLabel}>{duration}</Text>
+          <Text style={[styles.durationLabel, { color: colors.subtext }]}>{duration}</Text>
         ) : null}
 
         {/* Title */}
-        <Text style={styles.title}>{videoTitle}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{videoTitle}</Text>
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionItem} onPress={() => setIsSaved(s => !s)}>
-            <Text style={{ fontSize: 18, color: isSaved ? C.red : C.slate }}>
+          <TouchableOpacity style={[styles.actionItem, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => setIsSaved(s => !s)}>
+            <Text style={{ fontSize: 18, color: isSaved ? C.red : colors.subtext }}>
               {isSaved ? '♥' : '♡'}
             </Text>
-            <Text style={[styles.actionLabel, isSaved && { color: C.red }]}>Save</Text>
+            <Text style={[styles.actionLabel, { color: isSaved ? C.red : colors.subtext }]}>Save</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionItem} onPress={handleShare}>
-            <Text style={{ fontSize: 18, color: C.slate }}>↑</Text>
-            <Text style={styles.actionLabel}>Share</Text>
+          <TouchableOpacity style={[styles.actionItem, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={handleShare}>
+            <Text style={{ fontSize: 18, color: colors.subtext }}>↑</Text>
+            <Text style={[styles.actionLabel, { color: colors.subtext }]}>Share</Text>
           </TouchableOpacity>
         </View>
 
@@ -139,7 +143,7 @@ export default function TalkPlayerScreen() {
         {description && (
           <View style={{ marginBottom: 20 }}>
             <SectionHeader>About this talk</SectionHeader>
-            <Text style={styles.descText}>{description}</Text>
+            <Text style={[styles.descText, { color: colors.text }]}>{description}</Text>
           </View>
         )}
       </ScrollView>

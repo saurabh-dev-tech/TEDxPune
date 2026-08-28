@@ -11,12 +11,12 @@ import { VideosApi } from '@/lib/api/videos';
 import type { Playlist, Video } from '@/lib/api/types';
 import { MaxWidthContainer } from '@/components/tedx/max-width-container';
 
+import { useTheme } from '@/lib/theme/context';
+
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 function formatDuration(dur: string | null | undefined): string {
   if (!dur) return '';
-  // If already HH:MM:SS or MM:SS, return as-is
   if (/^\d+:\d+/.test(dur)) return dur;
-  // ISO 8601 duration: PT1H2M3S
   const match = dur.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   if (!match) return dur;
   const h = parseInt(match[1] ?? '0');
@@ -28,6 +28,7 @@ function formatDuration(dur: string | null | undefined): string {
 
 /* ── Video card (grid) ────────────────────────────────────────────────────── */
 function VideoCard({ video, onPress }: { video: Video; onPress: () => void }) {
+  const { colors } = useTheme();
   return (
     <TouchableOpacity style={{ flex: 1 }} onPress={onPress} activeOpacity={0.85}>
       {/* Thumbnail */}
@@ -52,9 +53,9 @@ function VideoCard({ video, onPress }: { video: Video; onPress: () => void }) {
       </View>
       {/* Meta */}
       <View style={{ paddingTop: 8, paddingHorizontal: 2 }}>
-        <Text style={styles.videoTitle} numberOfLines={2}>{video.title}</Text>
+        <Text style={[styles.videoTitle, { color: colors.text }]} numberOfLines={2}>{video.title}</Text>
         {video.publishedAt && (
-          <Text style={styles.videoMeta}>
+          <Text style={[styles.videoMeta, { color: colors.subtext }]}>
             {new Date(video.publishedAt).getFullYear()}
           </Text>
         )}
@@ -65,8 +66,9 @@ function VideoCard({ video, onPress }: { video: Video; onPress: () => void }) {
 
 /* ── Featured card ────────────────────────────────────────────────────────── */
 function FeaturedCard({ video, onPress }: { video: Video; onPress: () => void }) {
+  const { colors } = useTheme();
   return (
-    <TouchableOpacity style={styles.featuredCard} onPress={onPress} activeOpacity={0.9}>
+    <TouchableOpacity style={[styles.featuredCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={onPress} activeOpacity={0.9}>
       <View style={{ height: 200, width: '100%' }}>
         {video.thumbnailUrl ? (
           <Image source={{ uri: video.thumbnailUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
@@ -87,9 +89,9 @@ function FeaturedCard({ video, onPress }: { video: Video; onPress: () => void })
         </View>
       </View>
       <View style={{ padding: 14 }}>
-        <Text style={styles.featuredTitle} numberOfLines={2}>{video.title}</Text>
+        <Text style={[styles.featuredTitle, { color: colors.text }]} numberOfLines={2}>{video.title}</Text>
         {video.description ? (
-          <Text style={styles.featuredDesc} numberOfLines={2}>{video.description}</Text>
+          <Text style={[styles.featuredDesc, { color: colors.subtext }]} numberOfLines={2}>{video.description}</Text>
         ) : null}
       </View>
     </TouchableOpacity>
@@ -99,6 +101,7 @@ function FeaturedCard({ video, onPress }: { video: Video; onPress: () => void })
 /* ── Screen ───────────────────────────────────────────────────────────────── */
 export default function TalksScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [playlists,    setPlaylists]    = useState<Playlist[]>([]);
   const [activeId,     setActiveId]     = useState<string | null>(null);
   const [videos,       setVideos]       = useState<Video[]>([]);
@@ -166,13 +169,12 @@ export default function TalksScreen() {
   const activePlaylist = playlists.find(p => p.id === activeId);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.paper }}>
-      <MaxWidthContainer style={{ backgroundColor: C.paper }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <MaxWidthContainer style={{ backgroundColor: colors.background }}>
         {/* Header */}
         <View style={styles.header}>
           <View style={{ marginBottom: 14 }}>
-            <Text style={styles.headerEyebrow}>02 / talks</Text>
-            <Text style={styles.headerTitle}>Talks worth{'\n'}rewatching</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Talks worth{'\n'}rewatching</Text>
           </View>
 
           {/* Playlist tabs */}
@@ -181,22 +183,28 @@ export default function TalksScreen() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={{ flexDirection: 'row', gap: 7 }}>
-                {playlists.map(p => (
-                  <TouchableOpacity
-                    key={p.id}
-                    onPress={() => setActiveId(p.id)}
-                    style={[styles.chip, activeId === p.id && styles.chipActive]}
-                  >
-                    <Text style={[styles.chipText, activeId === p.id && styles.chipTextActive]}>
-                      {p.playlistName}
-                    </Text>
-                    {(p.videoCount ?? 0) > 0 && (
-                      <Text style={[styles.chipCount, activeId === p.id && { color: 'rgba(255,255,255,0.6)' }]}>
-                        {' '}{p.videoCount}
+                {playlists.map(p => {
+                  const isActive = activeId === p.id;
+                  return (
+                    <TouchableOpacity
+                      key={p.id}
+                      onPress={() => setActiveId(p.id)}
+                      style={[
+                        styles.chip,
+                        { backgroundColor: isActive ? C.red : colors.surface, borderColor: isActive ? C.red : colors.border },
+                      ]}
+                    >
+                      <Text style={[styles.chipText, { color: isActive ? '#fff' : colors.text }]}>
+                        {p.playlistName}
                       </Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
+                      {(p.videoCount ?? 0) > 0 && (
+                        <Text style={[styles.chipCount, { color: isActive ? 'rgba(255,255,255,0.8)' : colors.subtext }]}>
+                          {' '}{p.videoCount}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </ScrollView>
           )}
@@ -221,7 +229,7 @@ export default function TalksScreen() {
           {loadingVids && (
             <View style={{ paddingVertical: 60, alignItems: 'center' }}>
               <ActivityIndicator color={C.red} size="large" />
-              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: C.faint, marginTop: 12, letterSpacing: 1 }}>
+              <Text style={{ fontFamily: Fonts.mono, fontSize: 10, color: colors.subtext, marginTop: 12, letterSpacing: 1 }}>
                 LOADING…
               </Text>
             </View>
@@ -231,8 +239,8 @@ export default function TalksScreen() {
           {!loadingVids && !error && videos.length === 0 && (
             <View style={{ paddingVertical: 48, alignItems: 'center' }}>
               <Text style={{ fontSize: 28, marginBottom: 12 }}>📺</Text>
-              <Text style={{ fontFamily: Fonts.serif, fontSize: 18, color: C.ink, marginBottom: 6 }}>No talks yet</Text>
-              <Text style={{ fontSize: 13, color: C.muted, textAlign: 'center' }}>
+              <Text style={{ fontFamily: Fonts.serif, fontSize: 18, color: colors.text, marginBottom: 6 }}>No talks yet</Text>
+              <Text style={{ fontSize: 13, color: colors.subtext, textAlign: 'center' }}>
                 Videos in this playlist will appear here.
               </Text>
             </View>

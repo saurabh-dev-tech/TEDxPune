@@ -2,7 +2,7 @@
   "expo": {
     "name": "TEDxPune Tribe",
     "slug": "TEDxPune",
-    "version": "1.0.5",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "tedxpune",
@@ -12,6 +12,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tedxpune.community",
       "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to let you select and update your profile picture.",
+        "NSPhotoLibraryAddUsageDescription": "This app requires permission to save photos to your photo library.",
+        "NSCameraUsageDescription": "This app requires access to your camera to let you take a new profile picture.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoadsInWebContent": true,
           "NSAllowsLocalNetworking": true,
@@ -26,13 +29,17 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FFFFFF",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.tedxpune.community",
-      "versionCode": 7
+      "versionCode": 12,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -52,7 +59,14 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "This app requires access to your photo library to let you select and update your profile picture.",
+          "cameraPermission": "This app requires access to your camera to let you take a new profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -63,6 +77,11 @@
       "eas": {
         "projectId": "45f5ac71-1402-47f9-b7dd-141e6a1c5a83"
       }
+    },
+    "runtimeVersion": "1.1.0",
+    "updates": {
+      "url": "https://u.expo.dev/45f5ac71-1402-47f9-b7dd-141e6a1c5a83",
+      "fallbackToCacheTimeout": 0
     }
   }
 }

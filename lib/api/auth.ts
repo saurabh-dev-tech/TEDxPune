@@ -63,14 +63,14 @@ export const ExchangeApi = {
 export const EmailAuthApi = {
   requestOtp: (email: string) =>
     api.post<{ success?: boolean; message?: string } | null>(
-      '/auth/email/request',
+      '/auth/send-otp',
       { email },
       { noAuth: true }
     ),
 
   verifyOtp: (email: string, code: string) =>
     api.post<AuthResponse>(
-      '/auth/email/verify',
+      '/auth/verify-otp',
       { email, code },
       { noAuth: true }
     ),

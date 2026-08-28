@@ -11,7 +11,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { ErrorToastContainer } from '@/components/error-toast';
 import { ConsentModal } from '@/components/consent-modal';
 import { hasUserConsented } from '@/lib/auth/consent';
-import { registerForPushNotificationsAsync } from '@/lib/notifications';
+import { registerForPushNotificationsAsync, useNotificationObserver } from '@/lib/notifications/push';
 import { C } from '@/constants/theme';
 
 export const unstable_settings = {
@@ -21,7 +21,7 @@ export const unstable_settings = {
 const PUBLIC_ROUTES = new Set(['index', '', 'login', 'oauth', 'email-auth', '+not-found']);
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { initializing, isAuthenticated, user, claims } = useAuth();
+  const { initializing, isAuthenticated, user, claims, refreshUser } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const { colors } = useTheme();
@@ -30,15 +30,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const [checkingConsent, setCheckingConsent] = useState(true);
   const [showConsentModal, setShowConsentModal] = useState(false);
 
+  // Observe notification clicks and navigate to /post/[id]
+  useNotificationObserver();
+
   // Register push notifications when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       registerForPushNotificationsAsync()
-        .then((res) => {
-          if (res.token) {
-            console.log('[App] Push Token Registered:', res.token);
-          }
-        })
         .catch((err) => {
           console.warn('[App] Push registration non-fatal error:', err);
         });
@@ -108,7 +106,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       <ConsentModal
         visible={showConsentModal}
         userId={userId}
-        onConsentAccepted={() => {
+        onConsentAccepted={async () => {
+          await refreshUser();
           setShowConsentModal(false);
           if (segments[0] === 'login') {
             router.replace('/(tabs)');
@@ -133,7 +132,15 @@ function MainNavigation() {
             options={{ presentation: 'modal', headerShown: false, animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
+            name="notifications"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
             name="talk/[id]"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="post/[id]"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
           <Stack.Screen

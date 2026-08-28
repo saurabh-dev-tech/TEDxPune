@@ -16,10 +16,10 @@ interface AvatarProps {
   url?: string | null;
 }
 
-export function Avatar({ name, size = 40, ring = false, url }: AvatarProps) {
+export function Avatar({ name = '', size = 40, ring = false, url }: AvatarProps) {
   const [failed, setFailed] = useState(false);
 
-  const initials = name
+  const initials = (name || '')
     .split(' ')
     .map(n => n[0])
     .filter(Boolean)
@@ -28,7 +28,7 @@ export function Avatar({ name, size = 40, ring = false, url }: AvatarProps) {
     .toUpperCase() || '?';
 
   const showImage = !!url && !failed;
-  const bg = hashColor(name);
+  const bg = hashColor(name || '');
 
   const containerStyle = {
     width: size,

@@ -20,8 +20,11 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const ENV_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const ENV_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
+const ENV_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://npohpfnbndurvxdciivh.supabase.co';
+const ENV_KEY =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wb2hwZm5ibmR1cnZ4ZGNpaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTYwNTEsImV4cCI6MjA5MzYzMjA1MX0.Tj42kRzrLah_HQ8-a4WeICd7-GgN3VM1fdIXODab2_U';
 
 let runtimeUrl: string | null = null;
 let runtimeKey: string | null = null;
