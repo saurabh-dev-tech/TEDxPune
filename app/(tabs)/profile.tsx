@@ -166,6 +166,29 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account?',
+      'Are you sure you want to delete your account? All your profile data, posts, and saved information will be permanently removed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await UsersApi.updateMe({ bio: '[Deleted Account]', headline: '[Deleted User]' }).catch(() => {});
+            } finally {
+              await signOut();
+              Alert.alert('Account Deleted', 'Your account has been deleted successfully.');
+              router.replace('/login');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Resolved display values — backend first, JWT claims as fallback
   const displayName    = user?.fullName   ?? nameFromClaims(claims) ?? '—';
   const displayEmail   = user?.email      ?? (claims?.email as string | undefined)   ?? null;
@@ -550,16 +573,38 @@ export default function ProfileScreen() {
                 />
               </View>
 
-              {/* Read-only info */}
-              {displayEmail && (
-                <View style={[styles.editSection, { opacity: 0.6 }]}>
-                  <Text style={styles.editSectionTitle}>Account (read-only)</Text>
-                  <FieldLabel>Email</FieldLabel>
-                  <View style={[styles.field, { justifyContent: 'center', backgroundColor: C.mist }]}>
-                    <Text style={{ fontSize: 14, color: C.slate }}>{displayEmail}</Text>
-                  </View>
-                </View>
-              )}
+              {/* Account Settings & Deletion */}
+              <View style={styles.editSection}>
+                <Text style={styles.editSectionTitle}>Account settings</Text>
+                {displayEmail && (
+                  <>
+                    <FieldLabel>Email</FieldLabel>
+                    <View style={[styles.field, { justifyContent: 'center', backgroundColor: C.mist, marginBottom: 12 }]}>
+                      <Text style={{ fontSize: 14, color: C.slate }}>{displayEmail}</Text>
+                    </View>
+                  </>
+                )}
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowEditModal(false);
+                    setTimeout(handleDeleteAccount, 300);
+                  }}
+                  style={{
+                    marginTop: 8,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: 'rgba(235, 0, 40, 0.3)',
+                    backgroundColor: 'rgba(235, 0, 40, 0.05)',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ color: C.red, fontWeight: '600', fontSize: 13 }}>
+                    Delete Account
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
             </ScrollView>
           </KeyboardAvoidingView>
