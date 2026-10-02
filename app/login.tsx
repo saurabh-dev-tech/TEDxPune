@@ -11,6 +11,7 @@ import {
   TextInput,
   Image,
   useColorScheme,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -43,6 +44,8 @@ function Wordmark() {
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isWide = width > 560;
   const { signInWithToken } = useAuth();
   const [loading, setLoading] = useState<null | 'linkedin' | 'google' | 'apple' | 'email' | 'token' | 'server'>(null);
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -181,8 +184,9 @@ export default function LoginScreen() {
   const busy = loading !== null;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isWide && styles.containerCentered]}>
       <StatusBar style="dark" />
+      <View style={[styles.contentWrapper, isWide && styles.contentWrapperMax]}>
 
       {/* Top rail */}
       <View style={styles.topRail}>
@@ -225,6 +229,7 @@ export default function LoginScreen() {
           <Text style={{ color: C.ink, textDecorationLine: 'underline', fontWeight: '500' }}>Code of Conduct</Text>.
           {'\n'}Access is invite-verified.
         </Text>
+      </View>
       </View>
 
       {/* Dev token modal */}
@@ -382,6 +387,9 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.paper },
+  containerCentered: { alignItems: 'center' },
+  contentWrapper: { flex: 1, width: '100%' },
+  contentWrapperMax: { maxWidth: 560 },
   topRail: {
     paddingHorizontal: 28,
     paddingTop: 20,

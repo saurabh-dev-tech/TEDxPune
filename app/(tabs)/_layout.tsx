@@ -1,10 +1,12 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { BottomTabBar, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { HapticTab } from '@/components/haptic-tab';
 import { C } from '@/constants/theme';
+import { useTheme } from '@/lib/theme/context';
 
 function FeedIcon({ color }: { color: string }) {
   return (
@@ -50,16 +52,6 @@ function ProfileIcon({ color }: { color: string }) {
   );
 }
 
-/**
- * iOS 26 "Liquid Glass" tab background.
- *
- * Rendered behind the tab bar when it's set to position:absolute with
- * a transparent backgroundColor. `tint="systemChromeMaterial"` resolves
- * to the OS's adaptive material (Liquid Glass on iOS 26+, vibrancy on
- * earlier versions). A 1px hairline mirrors the system tab bar.
- */
-import { useTheme } from '@/lib/theme/context';
-
 function GlassTabBackground({ isDark }: { isDark: boolean }) {
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -80,7 +72,7 @@ function GlassTabBackground({ isDark }: { isDark: boolean }) {
   );
 }
 
-import { useWindowDimensions } from 'react-native';
+
 
 export default function TabLayout() {
   const { colors, isDark } = useTheme();
@@ -89,10 +81,11 @@ export default function TabLayout() {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
 
-  // Bar HEIGHT (incl. label & icon) + bottom inset (gesture/home indicator).
-  // Same content height on both platforms — only the inset differs.
   const BAR_CONTENT_HEIGHT = 56;
   const tabBarHeight = BAR_CONTENT_HEIGHT + insets.bottom;
+
+  const tabletDockWidth = Math.min(width - 40, 760);
+  const tabletMargin = (width - tabletDockWidth) / 2;
 
   const baseTabStyle: any = isIOS
     ? {
@@ -119,13 +112,22 @@ export default function TabLayout() {
   const tabletTabStyle: any = isTablet
     ? {
         position: 'absolute',
-        width: 720,
-        left: '50%',
-        marginLeft: -360,
-        borderLeftWidth: 1,
-        borderRightWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: colors.card,
+        left: tabletMargin,
+        right: tabletMargin,
+        bottom: Math.max(insets.bottom, 16),
+        height: 60,
+        borderRadius: 30,
+        borderWidth: 1,
+        borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
+        backgroundColor: isDark ? 'rgba(24, 24, 27, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+        elevation: 8,
+        paddingTop: 4,
+        paddingBottom: 6,
       }
     : {};
 
